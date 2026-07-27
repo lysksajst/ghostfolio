@@ -164,6 +164,11 @@ export const DERIVED_CURRENCIES = [
     currency: 'ZAc',
     factor: 100,
     rootCurrency: 'ZAR'
+  },
+  {
+    currency: 'CNH',
+    factor: 1,
+    rootCurrency: 'CNY'
   }
 ];
 
