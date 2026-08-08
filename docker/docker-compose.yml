@@ -1,7 +1,8 @@
 name: ghostfolio
 services:
   ghostfolio:
-    image: docker.io/ghostfolio/ghostfolio:latest
+    image: docker.io/ghostfolio/ghostfolio:local
+    build: ../
     container_name: ghostfolio
     restart: unless-stopped
     init: true
@@ -73,3 +74,5 @@ services:
 
 volumes:
   postgres:
+    external: true
+    name: ghostfolio-db
