@@ -47,8 +47,9 @@ export class InfoService {
 
   public async get(): Promise<InfoItem> {
     const info: Partial<InfoItem> = {};
-    let isReadOnlyMode: boolean;
-    let latestFearAndGreedStocksMarketDataPromise: Promise<MarketData>;
+    let isReadOnlyMode: boolean | undefined;
+    let latestFearAndGreedStocksMarketDataPromise:
+      Promise<MarketData> | undefined;
 
     const globalPermissions: string[] = [];
 
@@ -73,6 +74,10 @@ export class InfoService {
         });
 
       globalPermissions.push(permissions.enableFearAndGreedIndex);
+    }
+
+    if (this.configurationService.get('ENABLE_FEATURE_MCP')) {
+      globalPermissions.push(permissions.enableMcp);
     }
 
     if (this.configurationService.get('ENABLE_FEATURE_READ_ONLY_MODE')) {

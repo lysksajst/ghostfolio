@@ -1,6 +1,7 @@
 import { NUMERICAL_PRECISION_THRESHOLD_6_FIGURES } from '@ghostfolio/common/config';
 import { getDateFnsLocale, getLocale } from '@ghostfolio/common/helper';
 import { PortfolioSummary, User } from '@ghostfolio/common/interfaces';
+import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 import { translate } from '@ghostfolio/ui/i18n';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import { GfValueComponent } from '@ghostfolio/ui/value';
@@ -23,10 +24,16 @@ import {
   informationCircleOutline
 } from 'ionicons/icons';
 import { isNumber } from 'lodash';
+import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GfValueComponent, IonIcon, MatTooltipModule],
+  imports: [
+    GfValueComponent,
+    IonIcon,
+    MatTooltipModule,
+    NgxSkeletonLoaderModule
+  ],
   selector: 'gf-portfolio-summary',
   styleUrls: ['./portfolio-summary.component.scss'],
   templateUrl: './portfolio-summary.component.html'
@@ -48,6 +55,9 @@ export class GfPortfolioSummaryComponent implements OnChanges {
     'BUY_AND_SELL_ACTIVITIES_TOOLTIP'
   );
 
+  protected readonly isNumber = isNumber;
+  protected readonly PerformanceCalculationType = PerformanceCalculationType;
+
   protected isCashExpanded = false;
   protected isHoldingsExpanded = false;
   protected precision = 2;
@@ -68,6 +78,10 @@ export class GfPortfolioSummaryComponent implements OnChanges {
       ? this.summary.totalCashInBaseCurrency /
           this.summary.totalValueInBaseCurrency
       : 0;
+  }
+
+  protected get displayedCurrency() {
+    return this.deviceType === 'mobile' ? undefined : this.baseCurrency;
   }
 
   protected get emergencyFundPercentage() {
@@ -120,6 +134,36 @@ export class GfPortfolioSummaryComponent implements OnChanges {
 
     return (
       this.holdingsInBaseCurrency - (this.summary.emergencyFund?.assets ?? 0)
+    );
+  }
+
+  protected get netPerformancePercentageWithCurrencyEffect() {
+    if (
+      !this.user?.settings?.isExperimentalFeatures ||
+      !isNumber(this.summary?.netPerformancePercentageWithCurrencyEffect)
+    ) {
+      return this.summary?.netPerformancePercentageWithCurrencyEffect;
+    }
+
+    // Include the dividends (total return)
+    return (
+      this.summary.netPerformancePercentageWithCurrencyEffect +
+      (this.summary.dividendPercentageWithCurrencyEffect ?? 0)
+    );
+  }
+
+  protected get netPerformanceWithCurrencyEffect() {
+    if (
+      !this.user?.settings?.isExperimentalFeatures ||
+      !isNumber(this.summary?.netPerformanceWithCurrencyEffect)
+    ) {
+      return this.summary?.netPerformanceWithCurrencyEffect;
+    }
+
+    // Include the dividends (total return)
+    return (
+      this.summary.netPerformanceWithCurrencyEffect +
+      this.summary.dividendInBaseCurrency
     );
   }
 

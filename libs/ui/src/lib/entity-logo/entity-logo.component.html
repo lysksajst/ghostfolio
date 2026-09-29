@@ -1,4 +1,19 @@
-@if (src && !hasError) {
+@if (emojiFlag) {
+  <span
+    class="cursor-default d-block logo overflow-hidden position-relative"
+    role="img"
+    [attr.aria-label]="tooltip ? tooltip : countryCode"
+    [class.large]="size === 'large'"
+    [title]="tooltip ? tooltip : ''"
+  >
+    <span
+      aria-hidden="true"
+      class="align-items-center d-flex emoji justify-content-center line-height-1 position-absolute"
+    >
+      {{ emojiFlag }}
+    </span>
+  </span>
+} @else if (src && !hasError) {
   <img
     class="logo"
     [class.large]="size === 'large'"
@@ -7,5 +22,5 @@
     (error)="onError()"
   />
 } @else if (hasPlaceholder) {
-  <div class="logo placeholder" [class.large]="size === 'large'"></div>
+  <div class="logo" [class.large]="size === 'large'"></div>
 }

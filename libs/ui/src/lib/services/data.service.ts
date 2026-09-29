@@ -4,6 +4,7 @@ import {
   CreateAccountDto,
   CreateOrderDto,
   CreateTagDto,
+  CreateUserDto,
   CreateWatchlistItemDto,
   DeleteOwnUserDto,
   TransferBalanceDto,
@@ -66,11 +67,10 @@ import type {
 import { translate } from '@ghostfolio/ui/i18n';
 
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { SortDirection } from '@angular/material/sort';
 import { utc } from '@date-fns/utc';
 import {
-  Access as AccessModel,
   Account,
   AccountBalance,
   DataSource,
@@ -85,9 +85,7 @@ import { cloneDeep, groupBy, isNumber } from 'lodash';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Service()
 export class DataService {
   private readonly http = inject(HttpClient);
 
@@ -318,7 +316,7 @@ export class DataService {
   }
 
   public deleteAccess(aId: string) {
-    return this.http.delete<AccessModel>(`/api/v1/access/${aId}`);
+    return this.http.delete<void>(`/api/v1/access/${aId}`);
   }
 
   public deleteAccount(aId: string) {
@@ -650,24 +648,22 @@ export class DataService {
       .pipe(
         map((response) => {
           if (response.holdings) {
-            for (const symbol of Object.keys(response.holdings)) {
-              response.holdings[symbol].assetProfile.assetClassLabel =
-                translate(response.holdings[symbol].assetProfile.assetClass);
+            for (const holding of response.holdings) {
+              holding.assetProfile.assetClassLabel = translate(
+                holding.assetProfile.assetClass
+              );
 
-              response.holdings[symbol].assetProfile.assetSubClassLabel =
-                translate(response.holdings[symbol].assetProfile.assetSubClass);
+              holding.assetProfile.assetSubClassLabel = translate(
+                holding.assetProfile.assetSubClass
+              );
 
-              response.holdings[symbol].dateOfFirstActivity = response.holdings[
-                symbol
-              ].dateOfFirstActivity
-                ? parseISO(response.holdings[symbol].dateOfFirstActivity)
+              holding.dateOfFirstActivity = holding.dateOfFirstActivity
+                ? parseISO(holding.dateOfFirstActivity)
                 : undefined;
 
-              response.holdings[symbol].value = isNumber(
-                response.holdings[symbol].value
-              )
-                ? response.holdings[symbol].value
-                : response.holdings[symbol].valueInPercentage;
+              holding.value = isNumber(holding.value)
+                ? holding.value
+                : holding.valueInPercentage;
             }
           }
 
@@ -785,18 +781,14 @@ export class DataService {
       .pipe(
         map((response) => {
           if (response.holdings) {
-            for (const symbol of Object.keys(response.holdings)) {
-              response.holdings[symbol].assetProfile.assetClassLabel =
-                translate(response.holdings[symbol].assetProfile.assetClass);
+            for (const holding of response.holdings) {
+              holding.assetProfile.assetClassLabel = translate(
+                holding.assetProfile.assetClass
+              );
 
-              response.holdings[symbol].assetProfile.assetSubClassLabel =
-                translate(response.holdings[symbol].assetProfile.assetSubClass);
-
-              response.holdings[symbol].valueInBaseCurrency = isNumber(
-                response.holdings[symbol].valueInBaseCurrency
-              )
-                ? response.holdings[symbol].valueInBaseCurrency
-                : response.holdings[symbol].valueInPercentage;
+              holding.assetProfile.assetSubClassLabel = translate(
+                holding.assetProfile.assetSubClass
+              );
             }
           }
 
@@ -905,8 +897,8 @@ export class DataService {
     return this.http.post<Tag>(`/api/v1/tags`, aTag);
   }
 
-  public postUser() {
-    return this.http.post<UserItem>('/api/v1/user', {});
+  public postUser(aData: CreateUserDto) {
+    return this.http.post<UserItem>('/api/v1/user', aData);
   }
 
   public postWatchlistItem(watchlistItem: CreateWatchlistItemDto) {

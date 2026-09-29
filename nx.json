@@ -98,10 +98,16 @@
       "cache": true
     },
     "lint": {
+      "inputs": ["default", "^default", "{workspaceRoot}/eslint.config.cjs"],
       "cache": true
     },
     "@nx/jest:jest": {
-      "inputs": ["default", "^production", "{workspaceRoot}/jest.preset.js"],
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/jest.preset.js",
+        { "env": "TEST_TZ" }
+      ],
       "cache": true,
       "options": {
         "passWithNoTests": true

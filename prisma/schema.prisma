@@ -10,15 +10,18 @@ datasource db {
 
 model Access {
   alias         String?
-  createdAt     DateTime           @default(now())
-  granteeUser   User?              @relation("accessGet", fields: [granteeUserId], onDelete: Cascade, references: [id])
+  createdAt     DateTime   @default(now())
+  expiresAt     DateTime
+  granteeUser   User?      @relation("accessGet", fields: [granteeUserId], onDelete: Cascade, references: [id])
   granteeUserId String?
-  id            String             @id @default(uuid())
-  permissions   AccessPermission[] @default([READ_RESTRICTED])
-  settings      Json               @default("{}")
-  updatedAt     DateTime           @updatedAt
+  id            String     @id @default(uuid())
+  lastUsedAt    DateTime?
+  scopes        String[]   @default([])
+  settings      Json       @default("{}")
+  type          AccessType @default(PRIVATE)
+  updatedAt     DateTime   @updatedAt
   userId        String
-  user          User               @relation("accessGive", fields: [userId], onDelete: Cascade, references: [id])
+  user          User       @relation("accessGive", fields: [userId], onDelete: Cascade, references: [id])
 
   @@index([alias])
   @@index([granteeUserId])
@@ -156,19 +159,19 @@ model AuthDevice {
 }
 
 model MarketData {
-  createdAt   DateTime        @default(now())
-  dataSource  DataSource
-  date        DateTime
-  id          String          @id @default(uuid())
-  marketPrice Float
-  state       MarketDataState @default(CLOSE)
-  symbol      String
+  createdAt        DateTime        @default(now())
+  dataSource       DataSource
+  date             DateTime
+  id               String          @id @default(uuid())
+  isCarriedForward Boolean         @default(false)
+  marketPrice      Float
+  state            MarketDataState @default(CLOSE)
+  symbol           String
 
   @@unique([dataSource, date, symbol])
   @@index([dataSource])
   @@index([dataSource, symbol])
   @@index([date])
-  @@index([marketPrice])
   @@index([state])
   @@index([symbol])
 }
@@ -183,7 +186,6 @@ model Order {
   date            DateTime
   fee             Float
   id              String        @id @default(uuid())
-  isDraft         Boolean       @default(false)
   quantity        Float
   symbolProfileId String
   tags            Tag[]
@@ -196,9 +198,9 @@ model Order {
 
   @@index([accountId])
   @@index([date])
-  @@index([isDraft])
-  @@index([type])
-  @@index([userId])
+  @@index([symbolProfileId, date])
+  @@index([userId, date])
+  @@index([userId, type, date])
 }
 
 model Platform {
@@ -332,9 +334,10 @@ model User {
   @@index([thirdPartyId])
 }
 
-enum AccessPermission {
-  READ
-  READ_RESTRICTED
+enum AccessType {
+  MCP
+  PRIVATE
+  PUBLIC
 }
 
 enum AssetClass {

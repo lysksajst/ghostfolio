@@ -3,15 +3,19 @@ import { AssetProfileIdentifier } from '@ghostfolio/common/interfaces';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import { AdminService } from '@ghostfolio/ui/services';
 
-import { Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { EMPTY, Subject, catchError, finalize, forkJoin } from 'rxjs';
 
-@Injectable()
+@Service({ autoProvided: false })
 export class AdminMarketDataService {
-  public constructor(
-    private adminService: AdminService,
-    private notificationService: NotificationService
-  ) {}
+  private readonly refreshSubject = new Subject<void>();
+
+  private readonly adminService = inject(AdminService);
+  private readonly notificationService = inject(NotificationService);
+
+  public get refresh$() {
+    return this.refreshSubject.asObservable();
+  }
 
   public deleteAssetProfile({ dataSource, symbol }: AssetProfileIdentifier) {
     const assetProfileDeleted = new Subject<void>();
@@ -73,5 +77,9 @@ export class AdminMarketDataService {
     });
 
     return assetProfilesDeleted.asObservable();
+  }
+
+  public triggerRefresh() {
+    this.refreshSubject.next();
   }
 }

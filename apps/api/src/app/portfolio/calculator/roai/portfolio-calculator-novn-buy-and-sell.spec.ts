@@ -72,7 +72,7 @@ describe('PortfolioCalculator', () => {
 
     configurationService = new ConfigurationService();
 
-    currentRateService = new CurrentRateService(null, null, null, null);
+    currentRateService = new CurrentRateService(null, null, null);
 
     exchangeRateDataService = new ExchangeRateDataService(
       null,
@@ -139,6 +139,8 @@ describe('PortfolioCalculator', () => {
 
       expect(portfolioSnapshot.historicalData[0]).toEqual({
         date: '2022-03-06',
+        dividendInBaseCurrency: 0,
+        dividendInPercentageWithCurrencyEffect: 0,
         investmentValueWithCurrencyEffect: 0,
         netPerformance: 0,
         netPerformanceInPercentage: 0,
@@ -153,22 +155,24 @@ describe('PortfolioCalculator', () => {
       });
 
       /**
-       * Closing price on 2022-03-07 is unknown,
-       * hence it uses the last unit price (2022-04-11): 87.8
+       * Closing price on 2022-03-07 is unknown and there is no earlier market
+       * price, hence it uses the unit price of the activity: 75.8
        */
       expect(portfolioSnapshot.historicalData[1]).toEqual({
         date: '2022-03-07',
+        dividendInBaseCurrency: 0,
+        dividendInPercentageWithCurrencyEffect: 0,
         investmentValueWithCurrencyEffect: 151.6,
-        netPerformance: 24, // 2 * (87.8 - 75.8) = 24
-        netPerformanceInPercentage: 0.158311345646438, // 24 ÷ 151.6 = 0.158311345646438
-        netPerformanceInPercentageWithCurrencyEffect: 0.158311345646438, // 24 ÷ 151.6 = 0.158311345646438
-        netPerformanceWithCurrencyEffect: 24,
-        netWorth: 175.6, // 2 * 87.8 = 175.6
+        netPerformance: 0, // 2 * (75.8 - 75.8) = 0
+        netPerformanceInPercentage: 0, // 0 ÷ 151.6 = 0
+        netPerformanceInPercentageWithCurrencyEffect: 0, // 0 ÷ 151.6 = 0
+        netPerformanceWithCurrencyEffect: 0,
+        netWorth: 151.6, // 2 * 75.8 = 151.6
         totalCashInBaseCurrency: 0,
         totalInvestment: 151.6,
         totalInvestmentValueWithCurrencyEffect: 151.6,
-        value: 175.6, // 2 * 87.8 = 175.6
-        valueWithCurrencyEffect: 175.6
+        value: 151.6, // 2 * 75.8 = 151.6
+        valueWithCurrencyEffect: 151.6
       });
 
       expect(
@@ -177,6 +181,8 @@ describe('PortfolioCalculator', () => {
         ]
       ).toEqual({
         date: '2022-04-11',
+        dividendInBaseCurrency: 0,
+        dividendInPercentageWithCurrencyEffect: 0,
         investmentValueWithCurrencyEffect: 0,
         netPerformance: 19.86,
         netPerformanceInPercentage: 0.13100263852242744,
@@ -197,6 +203,8 @@ describe('PortfolioCalculator', () => {
         positions: [
           {
             activitiesCount: 2,
+            averageInvestment: new Big('151.6'),
+            averageInvestmentWithCurrencyEffect: new Big('151.6'),
             averagePrice: new Big('0'),
             currency: 'CHF',
             dataSource: 'YAHOO',
@@ -226,8 +234,6 @@ describe('PortfolioCalculator', () => {
             quantity: new Big('0'),
             symbol: 'NOVN.SW',
             tags: [],
-            timeWeightedInvestment: new Big('151.6'),
-            timeWeightedInvestmentWithCurrencyEffect: new Big('151.6'),
             valueInBaseCurrency: new Big('0')
           }
         ],

@@ -9,25 +9,33 @@
       />
     </div>
   </div>
-  <div
-    class="flex-nowrap px-3 py-1 row"
-    [hidden]="summary?.activityCount === null"
-  >
-    <div class="d-flex flex-grow-1 indent-1 text-truncate">
-      {{ summary?.activityCount }}
-      <ng-container i18n>{summary?.activityCount, plural,
-        =1 {activity}
-        other {activities}
-      }</ng-container>
-      <span
-        class="align-items-center d-none d-sm-flex ml-1"
-        matTooltipPosition="above"
-        [matTooltip]="buyAndSellActivitiesTooltip"
-      >
-        <ion-icon name="information-circle-outline" />
-      </span>
+  @if (isLoading) {
+    <div class="flex-nowrap px-3 py-1 row">
+      <div class="d-flex flex-grow-1 indent-1 text-truncate">
+        <ngx-skeleton-loader
+          animation="pulse"
+          [theme]="{ height: '1.5rem', width: '7.5rem' }"
+        />
+      </div>
     </div>
-  </div>
+  } @else {
+    <div class="flex-nowrap px-3 py-1 row">
+      <div class="d-flex flex-grow-1 indent-1 text-truncate">
+        {{ summary?.activityCount }}
+        <ng-container i18n>{summary?.activityCount, plural,
+          =1 {activity}
+          other {activities}
+        }</ng-container>
+        <span
+          class="align-items-center d-none d-sm-flex ml-1"
+          matTooltipPosition="above"
+          [matTooltip]="buyAndSellActivitiesTooltip"
+        >
+          <ion-icon name="information-circle-outline" />
+        </span>
+      </div>
+    </div>
+  }
   <div class="row">
     <div class="col"><hr /></div>
   </div>
@@ -40,7 +48,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.totalBuy"
       />
     </div>
@@ -54,7 +62,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.totalSell"
       />
     </div>
@@ -71,7 +79,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.totalInvestmentValueWithCurrencyEffect"
       />
     </div>
@@ -85,15 +93,34 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.grossPerformanceWithCurrencyEffect"
       />
     </div>
   </div>
+  @if (user?.settings?.isExperimentalFeatures) {
+    <div class="flex-nowrap px-3 py-1 row">
+      <div class="flex-grow-1 text-truncate" i18n>Dividend</div>
+      <div class="d-flex justify-content-end">
+        @if (isNumber(summary?.dividendInBaseCurrency)) {
+          <span class="mr-1">+</span>
+        }
+        <gf-value
+          class="justify-content-end"
+          [isCurrency]="true"
+          [isLoading]="isLoading"
+          [locale]="locale"
+          [precision]="precision"
+          [unit]="displayedCurrency"
+          [value]="summary?.dividendInBaseCurrency"
+        />
+      </div>
+    </div>
+  }
   <div class="flex-nowrap px-3 py-1 row">
     <div class="flex-grow-1 text-truncate" i18n>Fees</div>
     <div class="d-flex justify-content-end">
-      @if (summary?.fees || summary?.fees === 0) {
+      @if (isNumber(summary?.fees)) {
         <span class="mr-1">-</span>
       }
       <gf-value
@@ -102,7 +129,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.fees"
       />
     </div>
@@ -119,19 +146,24 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
-        [value]="summary?.netPerformanceWithCurrencyEffect"
+        [unit]="displayedCurrency"
+        [value]="netPerformanceWithCurrencyEffect"
       />
     </div>
   </div>
   <div class="flex-nowrap px-3 py-1 row">
     <div class="flex-grow-1 indent-1 text-truncate">
       <ng-container i18n>Net Performance</ng-container>
-      <abbr
-        class="d-none d-sm-inline-block initialism ml-2 text-muted"
-        title="Return on Average Investment"
-        >(ROAI)</abbr
-      >
+      @if (
+        user?.settings?.performanceCalculationType ===
+        PerformanceCalculationType.ROAI
+      ) {
+        <abbr
+          class="d-none d-sm-inline-block initialism ml-2 text-muted"
+          title="Return on Average Investment"
+          >(ROAI)</abbr
+        >
+      }
     </div>
     <div class="flex-column flex-wrap justify-content-end">
       <gf-value
@@ -141,7 +173,7 @@
         [isLoading]="isLoading"
         [isPercent]="true"
         [locale]="locale"
-        [value]="summary?.netPerformancePercentageWithCurrencyEffect"
+        [value]="netPerformancePercentageWithCurrencyEffect"
       />
     </div>
   </div>
@@ -158,7 +190,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.totalAssetsInBaseCurrency"
       />
     </div>
@@ -183,7 +215,7 @@
       <ng-container i18n>Holdings</ng-container>
       @if (
         !hasImpersonationId &&
-        summary?.totalValueInBaseCurrency > 0 &&
+        (summary?.totalValueInBaseCurrency ?? 0) > 0 &&
         user?.settings?.isExperimentalFeatures
       ) {
         <gf-value
@@ -204,7 +236,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="holdingsInBaseCurrency"
       />
     </div>
@@ -220,7 +252,7 @@
           [isLoading]="isLoading"
           [locale]="locale"
           [precision]="precision"
-          [unit]="baseCurrency"
+          [unit]="displayedCurrency"
           [value]="investmentsInBaseCurrency"
         />
       </div>
@@ -235,7 +267,7 @@
           [isLoading]="isLoading"
           [locale]="locale"
           [precision]="precision"
-          [unit]="baseCurrency"
+          [unit]="displayedCurrency"
           [value]="summary?.emergencyFund?.assets"
         />
       </div>
@@ -261,7 +293,7 @@
       <ng-container i18n>Cash</ng-container>
       @if (
         !hasImpersonationId &&
-        summary?.totalValueInBaseCurrency > 0 &&
+        (summary?.totalValueInBaseCurrency ?? 0) > 0 &&
         user?.settings?.isExperimentalFeatures
       ) {
         <gf-value
@@ -282,7 +314,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.totalCashInBaseCurrency"
       />
     </div>
@@ -298,7 +330,7 @@
           [isLoading]="isLoading"
           [locale]="locale"
           [precision]="precision"
-          [unit]="baseCurrency"
+          [unit]="displayedCurrency"
           [value]="summary?.cash"
         />
       </div>
@@ -313,7 +345,7 @@
           [isLoading]="isLoading"
           [locale]="locale"
           [precision]="precision"
-          [unit]="baseCurrency"
+          [unit]="displayedCurrency"
           [value]="summary?.emergencyFund?.cash"
         />
       </div>
@@ -324,7 +356,7 @@
       <ng-container i18n>Excluded from Analysis</ng-container>
       @if (
         !hasImpersonationId &&
-        summary?.totalValueInBaseCurrency > 0 &&
+        (summary?.totalValueInBaseCurrency ?? 0) > 0 &&
         user?.settings?.isExperimentalFeatures
       ) {
         <gf-value
@@ -343,7 +375,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.excludedAccountsAndActivities"
       />
     </div>
@@ -354,10 +386,7 @@
   <div class="flex-nowrap px-3 py-1 row">
     <div class="flex-grow-1 text-truncate" i18n>Liabilities</div>
     <div class="d-flex justify-content-end">
-      @if (
-        summary?.liabilitiesInBaseCurrency ||
-        summary?.liabilitiesInBaseCurrency === 0
-      ) {
+      @if (isNumber(summary?.liabilitiesInBaseCurrency)) {
         <span class="mr-1">-</span>
       }
       <gf-value
@@ -366,7 +395,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.liabilitiesInBaseCurrency"
       />
     </div>
@@ -383,7 +412,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.totalValueInBaseCurrency"
       />
     </div>
@@ -412,7 +441,7 @@
       <ng-container i18n>Emergency Fund</ng-container>
       @if (
         !hasImpersonationId &&
-        summary?.totalValueInBaseCurrency > 0 &&
+        (summary?.totalValueInBaseCurrency ?? 0) > 0 &&
         user?.settings?.isExperimentalFeatures
       ) {
         <gf-value
@@ -456,7 +485,7 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.emergencyFund?.total"
       />
     </div>
@@ -470,23 +499,25 @@
         [isLoading]="isLoading"
         [locale]="locale"
         [precision]="precision"
-        [unit]="baseCurrency"
+        [unit]="displayedCurrency"
         [value]="summary?.interestInBaseCurrency"
       />
     </div>
   </div>
-  <div class="flex-nowrap px-3 py-1 row">
-    <div class="flex-grow-1 text-truncate" i18n>Dividend</div>
-    <div class="justify-content-end">
-      <gf-value
-        class="justify-content-end"
-        [isCurrency]="true"
-        [isLoading]="isLoading"
-        [locale]="locale"
-        [precision]="precision"
-        [unit]="baseCurrency"
-        [value]="summary?.dividendInBaseCurrency"
-      />
+  @if (!user?.settings?.isExperimentalFeatures) {
+    <div class="flex-nowrap px-3 py-1 row">
+      <div class="flex-grow-1 text-truncate" i18n>Dividend</div>
+      <div class="justify-content-end">
+        <gf-value
+          class="justify-content-end"
+          [isCurrency]="true"
+          [isLoading]="isLoading"
+          [locale]="locale"
+          [precision]="precision"
+          [unit]="displayedCurrency"
+          [value]="summary?.dividendInBaseCurrency"
+        />
+      </div>
     </div>
-  </div>
+  }
 </div>

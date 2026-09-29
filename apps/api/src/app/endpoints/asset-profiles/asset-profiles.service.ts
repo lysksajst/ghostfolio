@@ -1,4 +1,5 @@
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
+import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
 import { AssetProfileSplitService } from '@ghostfolio/api/services/asset-profile-split/asset-profile-split.service';
 import { BenchmarkService } from '@ghostfolio/api/services/benchmark/benchmark.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
@@ -19,23 +20,28 @@ import {
   AssetProfileIdentifier,
   AssetProfileItem,
   AssetProfilesResponse,
+  DataProviderInfo,
   EnhancedAssetProfile,
   Filter
 } from '@ghostfolio/common/interfaces';
 import { MarketDataPreset } from '@ghostfolio/common/types';
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AssetClass, AssetSubClass, DataSource, Prisma } from '@prisma/client';
 import { groupBy } from 'lodash';
 
 @Injectable()
 export class AssetProfilesService {
+  private readonly logger = new Logger(AssetProfilesService.name);
+
   public constructor(
     private readonly activitiesService: ActivitiesService,
     private readonly assetProfileSplitService: AssetProfileSplitService,
     private readonly benchmarkService: BenchmarkService,
     private readonly dataGatheringService: DataGatheringService,
     private readonly dataProviderService: DataProviderService,
+    private readonly eventEmitter: EventEmitter2,
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly marketDataService: MarketDataService,
     private readonly prismaService: PrismaService,
@@ -62,18 +68,24 @@ export class AssetProfilesService {
       symbolProfileId
     });
 
-    await this.dataGatheringService.gatherSymbol({ dataSource, symbol });
+    await this.gatherSymbolAndEmitPortfolioChangedEvents({
+      dataSource,
+      symbol,
+      symbolProfileId
+    });
 
     return assetProfileSplit;
   }
 
   public async deleteSplit({
+    dataSource,
     id,
+    symbol,
     symbolProfileId
   }: {
     id: string;
     symbolProfileId: string;
-  }) {
+  } & AssetProfileIdentifier) {
     const isDeleted = await this.assetProfileSplitService.deleteById({
       id,
       symbolProfileId
@@ -82,6 +94,60 @@ export class AssetProfilesService {
     if (!isDeleted) {
       throw new NotFoundException();
     }
+
+    await this.gatherSymbolAndEmitPortfolioChangedEvents({
+      dataSource,
+      symbol,
+      symbolProfileId
+    });
+  }
+
+  /**
+   * Gathers the market data of the given asset profile and invalidates the
+   * portfolio snapshots of the affected users as soon as it is available.
+   * Emitting the events earlier would recompute the snapshots from
+   * split-adjusted quantities and not yet split-adjusted market prices.
+   *
+   * With withImmediateInvalidation the snapshots are invalidated a second
+   * time, before the gathering. This is necessary if the snapshots are already
+   * wrong without new market data, because the invalidation after the
+   * gathering is held in memory and is therefore lost if the process restarts.
+   */
+  public async gatherSymbolAndEmitPortfolioChangedEvents({
+    dataSource,
+    force = true,
+    symbol,
+    symbolProfileId,
+    withImmediateInvalidation = false
+  }: {
+    force?: boolean;
+    symbolProfileId: string;
+    withImmediateInvalidation?: boolean;
+  } & AssetProfileIdentifier) {
+    if (withImmediateInvalidation) {
+      await this.emitPortfolioChangedEvents(symbolProfileId);
+    }
+
+    const jobs = await this.dataGatheringService.gatherSymbol({
+      dataSource,
+      force,
+      symbol
+    });
+
+    void Promise.allSettled(
+      jobs.map((job) => {
+        return job.finished();
+      })
+    )
+      .then(() => {
+        return this.emitPortfolioChangedEvents(symbolProfileId);
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Could not emit the portfolio changed events of the asset profile ${getAssetProfileIdentifier({ dataSource, symbol })}`,
+          error.stack
+        );
+      });
   }
 
   public async getAssetProfile({
@@ -299,6 +365,23 @@ export class AssetProfilesService {
       );
     }
 
+    const dataProviderInfoMap = new Map<DataSource, DataProviderInfo>(
+      [
+        ...new Set(
+          symbolProfiles.map(({ dataSource }) => {
+            return dataSource;
+          })
+        )
+      ].map((dataSource) => {
+        return [
+          dataSource,
+          this.dataProviderService
+            .getDataProvider(dataSource)
+            .getDataProviderInfo()
+        ];
+      })
+    );
+
     let assetProfiles: AssetProfileItem[] = await Promise.all(
       symbolProfiles.map(async (assetProfile) => {
         const {
@@ -352,6 +435,7 @@ export class AssetProfilesService {
           sectorsCount,
           symbol,
           activitiesCount: _count.activities,
+          dataProviderInfo: dataProviderInfoMap.get(dataSource),
           date: activities?.[0]?.date,
           isUsedByUsersWithSubscription: await isUsedByUsersWithSubscription,
           watchedByCount: _count.watchedBy
@@ -423,6 +507,18 @@ export class AssetProfilesService {
     }
 
     return assetProfile;
+  }
+
+  private async emitPortfolioChangedEvents(symbolProfileId: string) {
+    const userIds =
+      await this.activitiesService.getUserIdsBySymbolProfileId(symbolProfileId);
+
+    for (const userId of userIds) {
+      this.eventEmitter.emit(
+        PortfolioChangedEvent.getName(),
+        new PortfolioChangedEvent({ userId })
+      );
+    }
   }
 
   private getAssetProfileDataUpdate({

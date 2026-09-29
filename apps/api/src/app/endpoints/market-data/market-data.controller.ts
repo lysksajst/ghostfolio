@@ -1,4 +1,5 @@
 import { SymbolService } from '@ghostfolio/api/app/symbol/symbol.service';
+import { AllowDuringImpersonation } from '@ghostfolio/api/decorators/allow-during-impersonation.decorator';
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
 import { HasPermissionGuard } from '@ghostfolio/api/guards/has-permission.guard';
 import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
@@ -7,7 +8,7 @@ import { UpdateBulkMarketDataDto } from '@ghostfolio/common/dtos';
 import { getCurrencyFromSymbol, isCurrency } from '@ghostfolio/common/helper';
 import { MarketDataOfMarketsResponse } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
-import { RequestWithUser } from '@ghostfolio/common/types';
+import type { RequestWithUser } from '@ghostfolio/common/types';
 
 import {
   Body,
@@ -27,6 +28,7 @@ import { DataSource, Prisma } from '@prisma/client';
 import { parseISO } from 'date-fns';
 import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 
+@AllowDuringImpersonation()
 @Controller('market-data')
 export class MarketDataController {
   public constructor(

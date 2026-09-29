@@ -3,6 +3,7 @@ import { GfAdminTagComponent } from '@ghostfolio/client/components/admin-tag/adm
 import { GfDataProviderStatusComponent } from '@ghostfolio/client/components/data-provider-status/data-provider-status.component';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
+  DEFAULT_LOCALE,
   E_MAIL_LINE_BREAK,
   PROPERTY_API_KEY_GHOSTFOLIO
 } from '@ghostfolio/common/config';
@@ -36,6 +37,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -61,6 +63,7 @@ import { catchError, filter, of } from 'rxjs';
     MatProgressBarModule,
     MatSortModule,
     MatTableModule,
+    MatTooltipModule,
     NgxSkeletonLoaderModule,
     RouterModule
   ],
@@ -74,6 +77,7 @@ export class GfAdminSettingsComponent implements OnInit {
   public dataSource = new MatTableDataSource<DataProviderInfo>();
   public defaultDateFormat: string;
   public displayedColumns = [
+    'icon',
     'name',
     'status',
     'assetProfileCount',
@@ -81,6 +85,7 @@ export class GfAdminSettingsComponent implements OnInit {
     'actions'
   ];
   public ghostfolioApiStatus: DataProviderGhostfolioStatusResponse;
+  public readonly ghostfolioApiStatusTooltip = $localize`Additional requests are granted while you are setting up your instance`;
   public hasGhostfolioApiKey: boolean;
   public isGhostfolioApiKeyValid: boolean;
   public isLoading = false;
@@ -93,6 +98,8 @@ export class GfAdminSettingsComponent implements OnInit {
   ].join(E_MAIL_LINE_BREAK)}`;
   public pricingUrl: string;
   public user: User;
+
+  protected readonly DEFAULT_LOCALE = DEFAULT_LOCALE;
 
   public constructor(
     private adminService: AdminService,

@@ -358,7 +358,7 @@
               </form>
             </div>
 
-            @if (dataProviderInfo) {
+            @if (dataProviderInfo?.name) {
               <div class="col-md-12 mb-3 text-center">
                 <hr />
                 <gf-data-provider-credits
@@ -379,20 +379,21 @@
           [baseCurrency]="data.baseCurrency"
           [dataSource]="dataSource"
           [deviceType]="data.deviceType"
-          [hasPermissionToCreateActivity]="false"
+          [hasActivities]="true"
+          [hasPermissionToCreateActivity]="data.hasPermissionToCreateActivity"
           [hasPermissionToDeleteActivity]="false"
           [hasPermissionToExportActivities]="
             !data.impersonationId && !user?.settings?.isRestrictedView
           "
           [hasPermissionToFilter]="false"
           [hasPermissionToOpenDetails]="false"
+          [hasPermissionToUpdateActivity]="data.hasPermissionToUpdateActivity"
           [locale]="data.locale"
           [pageIndex]="pageIndex"
           [pageSize]="pageSize"
           [showActions]="
             data.hasPermissionToCreateActivity &&
             !data.impersonationId &&
-            user?.settings?.isExperimentalFeatures &&
             !user?.settings?.isRestrictedView
           "
           [showNameColumn]="false"
@@ -418,18 +419,19 @@
           [showAllocationInPercentage]="user?.settings?.isExperimentalFeatures"
           [showBalance]="false"
           [showFooter]="false"
+          [showQuantity]="user?.settings?.isExperimentalFeatures"
           [showValue]="false"
           [showValueInBaseCurrency]="false"
         />
       </mat-tab>
-      @if (
-        hasPermissionToReadMarketDataOfOwnAssetProfile &&
-        user?.settings?.isExperimentalFeatures
-      ) {
-        <mat-tab>
+      @if (isOwnAssetProfile && user?.settings?.isExperimentalFeatures) {
+        <mat-tab [disabled]="!hasPermissionToReadMarketDataOfOwnAssetProfile">
           <ng-template mat-tab-label>
             <ion-icon name="server-outline" />
             <div class="d-none d-sm-block ml-2" i18n>Market Data</div>
+            @if (user?.subscription?.type === 'Basic') {
+              <gf-premium-indicator class="ml-1" [enableLink]="false" />
+            }
           </ng-template>
           <gf-historical-market-data-editor
             [currency]="assetProfile?.currency"
@@ -482,12 +484,12 @@
             @if (data.hasPermissionToAccessAdminControl) {
               <a
                 mat-stroked-button
-                [queryParams]="{
-                  assetProfileDialog: true,
-                  dataSource: assetProfile?.dataSource,
-                  symbol: assetProfile?.symbol
-                }"
-                [routerLink]="routerLinkAdminControlMarketData"
+                [routerLink]="
+                  routerLinkAdminControlMarketDataUpdate(
+                    assetProfile?.dataSource,
+                    assetProfile?.symbol
+                  )
+                "
                 (click)="onClose()"
                 ><ion-icon class="mr-1" name="create-outline" /><span i18n
                   >Manage Asset Profile</span

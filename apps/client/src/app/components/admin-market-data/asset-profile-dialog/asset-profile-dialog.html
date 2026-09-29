@@ -71,10 +71,10 @@
         type="button"
         [disabled]="
           !canDeleteAssetProfile({
-            activitiesCount: assetProfile?.activitiesCount,
+            activitiesCount: assetProfile?.activitiesCount ?? 0,
             isBenchmark: isBenchmark,
             symbol: data.symbol,
-            watchedByCount: assetProfile?.watchedByCount
+            watchedByCount: assetProfile?.watchedByCount ?? 0
           })
         "
         (click)="
@@ -272,8 +272,8 @@
               >
             </div>
             @if (
-              assetProfile?.countries?.length > 0 ||
-              assetProfile?.sectors?.length > 0
+              (assetProfile?.countries?.length ?? 0) > 0 ||
+              (assetProfile?.sectors?.length ?? 0) > 0
             ) {
               @if (
                 assetProfile?.countries?.length === 1 &&
@@ -467,6 +467,7 @@
                   cdkTextareaAutosize
                   formControlName="comment"
                   matInput
+                  [maxlength]="COMMENT_MAXIMUM_LENGTH"
                   (keyup.enter)="$event.stopPropagation()"
                 ></textarea>
               </mat-form-field>
@@ -511,9 +512,7 @@
           </div>
         </div>
       </mat-tab>
-      <!-- Splits are not applied to the portfolio calculation yet, hence the
-      tab to manage them is disabled -->
-      @if (false && user?.settings?.isExperimentalFeatures) {
+      @if (user?.settings?.isExperimentalFeatures) {
         <mat-tab>
           <ng-template mat-tab-label>
             <ion-icon name="git-compare-outline" />
@@ -662,7 +661,6 @@
                       formControlName="headers"
                       matInput
                       type="text"
-                      [matAutocomplete]="auto"
                     ></textarea>
                   </mat-form-field>
                 </div>

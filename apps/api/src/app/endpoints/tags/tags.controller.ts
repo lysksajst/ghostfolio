@@ -1,10 +1,11 @@
+import { AllowDuringImpersonation } from '@ghostfolio/api/decorators/allow-during-impersonation.decorator';
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
 import { HasPermissionGuard } from '@ghostfolio/api/guards/has-permission.guard';
 import { TagService } from '@ghostfolio/api/services/tag/tag.service';
 import { CreateTagDto, UpdateTagDto } from '@ghostfolio/common/dtos';
 import { isSystemTag } from '@ghostfolio/common/helper';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
-import { RequestWithUser } from '@ghostfolio/common/types';
+import type { RequestWithUser } from '@ghostfolio/common/types';
 
 import {
   Body,
@@ -23,6 +24,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Tag } from '@prisma/client';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
+@AllowDuringImpersonation()
 @Controller('tags')
 export class TagsController {
   public constructor(

@@ -28,6 +28,14 @@ export default {
 
 type Story = StoryObj<GfEntityLogoComponent>;
 
+export const FlagByCountryCode: Story = {
+  args: {
+    countryCode: 'US',
+    size: 'large',
+    tooltip: 'United States'
+  }
+};
+
 export const LogoByAssetProfileIdentifier: Story = {
   args: {
     dataSource: 'YAHOO',
@@ -45,18 +53,17 @@ export const LogoByUrl: Story = {
   }
 };
 
+export const LogoOnError: Story = {
+  args: {
+    size: 'large',
+    tooltip: 'Unknown',
+    url: 'https://unknown.ghostfol.io'
+  }
+};
+
 export const Placeholder: Story = {
   args: {
     hasPlaceholder: true,
     size: 'large'
-  }
-};
-
-export const PlaceholderOnError: Story = {
-  args: {
-    hasPlaceholder: true,
-    size: 'large',
-    tooltip: 'Unknown',
-    url: 'https://unknown.ghostfol.io'
   }
 };

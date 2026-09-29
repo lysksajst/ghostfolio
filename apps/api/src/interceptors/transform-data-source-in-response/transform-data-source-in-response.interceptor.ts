@@ -70,6 +70,8 @@ export class TransformDataSourceInResponseInterceptor<
             }
           }
 
+          data.dataProviderInfo = undefined;
+
           if (Object.keys(valueMap).length === 0) {
             return data;
           }
@@ -89,6 +91,7 @@ export class TransformDataSourceInResponseInterceptor<
               'holdings[*].assetProfile.dataSource',
               'holdings[*].dataSource',
               'items[*].dataSource',
+              'latestActivities[*].assetProfile.dataSource',
               'settings["filters.dataSource"]',
               'watchlist[*].dataSource'
             ]

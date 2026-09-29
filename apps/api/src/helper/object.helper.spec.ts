@@ -109,8 +109,8 @@ describe('redactAttributes', () => {
             }
           },
           hasError: false,
-          holdings: {
-            'AAPL.US': {
+          holdings: [
+            {
               activitiesCount: 1,
               currency: 'USD',
               markets: {
@@ -162,7 +162,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 11039.5,
               valueInPercentage: 0.0694356974830054
             },
-            'ALV.DE': {
+            {
               activitiesCount: 2,
               currency: 'EUR',
               markets: {
@@ -209,7 +209,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 6616.826601205088,
               valueInPercentage: 0.04161818652826481
             },
-            AMZN: {
+            {
               activitiesCount: 1,
               currency: 'USD',
               markets: {
@@ -261,7 +261,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 18799,
               valueInPercentage: 0.11824101426541227
             },
-            bitcoin: {
+            {
               activitiesCount: 1,
               currency: 'USD',
               markets: {
@@ -312,7 +312,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 36985.0332704,
               valueInPercentage: 0.232626620912395
             },
-            BONDORA_GO_AND_GROW: {
+            {
               activitiesCount: 5,
               currency: 'EUR',
               markets: {
@@ -363,7 +363,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 2231.644722160232,
               valueInPercentage: 0.014036487867880205
             },
-            FRANKLY95P: {
+            {
               activitiesCount: 6,
               currency: 'CHF',
               markets: {
@@ -487,7 +487,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 22363.19795483481,
               valueInPercentage: 0.14065892911313693
             },
-            MSFT: {
+            {
               activitiesCount: 1,
               currency: 'USD',
               markets: {
@@ -539,7 +539,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 12840.6,
               valueInPercentage: 0.08076416659271518
             },
-            TSLA: {
+            {
               activitiesCount: 1,
               currency: 'USD',
               markets: {
@@ -591,7 +591,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 39069,
               valueInPercentage: 0.2457342510950259
             },
-            VTI: {
+            {
               activitiesCount: 5,
               currency: 'USD',
               markets: {
@@ -763,7 +763,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 14102.5,
               valueInPercentage: 0.08870120238725339
             },
-            'VWRL.SW': {
+            {
               activitiesCount: 5,
               currency: 'CHF',
               markets: {
@@ -1171,7 +1171,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 23079.20085622547,
               valueInPercentage: 0.145162408515095
             },
-            'XDWD.DE': {
+            {
               activitiesCount: 1,
               currency: 'EUR',
               markets: {
@@ -1449,7 +1449,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 8847.35550100424,
               valueInPercentage: 0.055647656152211074
             },
-            USD: {
+            {
               activitiesCount: 0,
               currency: 'USD',
               allocationInPercentage: 0.20291717628620132,
@@ -1476,7 +1476,7 @@ describe('redactAttributes', () => {
               valueInBaseCurrency: 49890,
               valueInPercentage: 0.3137956381563603
             }
-          },
+          ],
           platforms: {
             'a5b14588-49a0-48e4-b9f7-e186b27860b7': {
               balance: 0,
@@ -1613,8 +1613,8 @@ describe('redactAttributes', () => {
         }
       },
       hasError: false,
-      holdings: {
-        'AAPL.US': {
+      holdings: [
+        {
           activitiesCount: 1,
           currency: 'USD',
           markets: {
@@ -1666,7 +1666,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.0694356974830054
         },
-        'ALV.DE': {
+        {
           activitiesCount: 2,
           currency: 'EUR',
           markets: {
@@ -1713,7 +1713,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.04161818652826481
         },
-        AMZN: {
+        {
           activitiesCount: 1,
           currency: 'USD',
           markets: {
@@ -1765,7 +1765,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.11824101426541227
         },
-        bitcoin: {
+        {
           activitiesCount: 1,
           currency: 'USD',
           markets: {
@@ -1816,7 +1816,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.232626620912395
         },
-        BONDORA_GO_AND_GROW: {
+        {
           activitiesCount: 5,
           currency: 'EUR',
           markets: {
@@ -1867,7 +1867,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.014036487867880205
         },
-        FRANKLY95P: {
+        {
           activitiesCount: 6,
           currency: 'CHF',
           markets: {
@@ -1971,7 +1971,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.14065892911313693
         },
-        MSFT: {
+        {
           activitiesCount: 1,
           currency: 'USD',
           markets: {
@@ -2023,7 +2023,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.08076416659271518
         },
-        TSLA: {
+        {
           activitiesCount: 1,
           currency: 'USD',
           markets: {
@@ -2075,7 +2075,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.2457342510950259
         },
-        VTI: {
+        {
           activitiesCount: 5,
           currency: 'USD',
           markets: {
@@ -2247,7 +2247,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.08870120238725339
         },
-        'VWRL.SW': {
+        {
           activitiesCount: 5,
           currency: 'CHF',
           markets: {
@@ -2647,7 +2647,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.145162408515095
         },
-        'XDWD.DE': {
+        {
           activitiesCount: 1,
           currency: 'EUR',
           markets: {
@@ -2925,7 +2925,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.055647656152211074
         },
-        USD: {
+        {
           activitiesCount: 0,
           currency: 'USD',
           allocationInPercentage: 0.20291717628620132,
@@ -2952,7 +2952,7 @@ describe('redactAttributes', () => {
           valueInBaseCurrency: null,
           valueInPercentage: 0.3137956381563603
         }
-      },
+      ],
       platforms: {
         'a5b14588-49a0-48e4-b9f7-e186b27860b7': {
           balance: null,
@@ -3035,5 +3035,206 @@ describe('redactAttributes', () => {
       }
     });
     console.timeEnd('redactAttributes execution time');
+  });
+
+  // An activity is a response of its own, hence it has to be redacted like an
+  // entry of the activities of a portfolio
+  it('should redact an activity which is the response itself', () => {
+    expect(
+      redactPaths({
+        object: {
+          account: {
+            comment: 'Private note',
+            id: '480269ce-e12a-4fd1-ac88-c4b0ff3f899c',
+            name: 'Interactive Brokers Account'
+          },
+          assetProfile: {
+            comment: 'Reviewed by the administrator',
+            name: 'Apple Inc',
+            scraperConfiguration: {
+              headers: { Authorization: 'Bearer TOKEN' },
+              mode: 'lazy',
+              selector: '.price',
+              url: 'https://example.org/get_price'
+            },
+            symbol: 'AAPL',
+            symbolMapping: { YAHOO: 'AAPL' },
+            watchedByCount: 7
+          },
+          comment: 'Bought on a dip',
+          currency: 'USD',
+          date: '2021-11-30T23:00:00.000Z',
+          fee: 19.9,
+          feeInAssetProfileCurrency: 19.9,
+          feeInBaseCurrency: 18.2,
+          id: '8c623328-6035-4b5f-b6d5-702cc1c9c56b',
+          quantity: 50,
+          type: 'BUY',
+          unitPrice: 220.79,
+          value: 11039.5,
+          valueInBaseCurrency: 10123.4
+        },
+        paths: DEFAULT_REDACTED_PATHS
+      })
+    ).toStrictEqual({
+      account: {
+        comment: null,
+        id: '480269ce-e12a-4fd1-ac88-c4b0ff3f899c',
+        name: 'Interactive Brokers Account'
+      },
+      assetProfile: {
+        comment: null,
+        name: 'Apple Inc',
+        scraperConfiguration: null,
+        symbol: 'AAPL',
+        symbolMapping: null,
+        watchedByCount: null
+      },
+      comment: null,
+      currency: 'USD',
+      date: '2021-11-30T23:00:00.000Z',
+      fee: null,
+      feeInAssetProfileCurrency: null,
+      feeInBaseCurrency: null,
+      id: '8c623328-6035-4b5f-b6d5-702cc1c9c56b',
+      quantity: null,
+      type: 'BUY',
+      // A price per unit stays visible, like the average price and the market
+      // price of a holding
+      unitPrice: 220.79,
+      value: null,
+      valueInBaseCurrency: null
+    });
+  });
+
+  // The write endpoints return a row of the database, which has no relation
+  it('should redact an activity without the relations', () => {
+    expect(
+      redactPaths({
+        object: {
+          comment: 'Bought on a dip',
+          currency: 'USD',
+          fee: 19.9,
+          id: '8c623328-6035-4b5f-b6d5-702cc1c9c56b',
+          quantity: 50,
+          type: 'BUY',
+          unitPrice: 220.79
+        },
+        paths: DEFAULT_REDACTED_PATHS
+      })
+    ).toStrictEqual({
+      comment: null,
+      currency: 'USD',
+      fee: null,
+      id: '8c623328-6035-4b5f-b6d5-702cc1c9c56b',
+      quantity: null,
+      type: 'BUY',
+      unitPrice: 220.79
+    });
+  });
+
+  it('should redact the activities of a response', () => {
+    expect(
+      redactPaths({
+        object: {
+          activities: [
+            {
+              assetProfile: {
+                comment: 'Reviewed by the administrator',
+                name: 'Apple Inc',
+                scraperConfiguration: {
+                  headers: { Authorization: 'Bearer TOKEN' },
+                  mode: 'lazy',
+                  selector: '.price',
+                  url: 'https://example.org/get_price'
+                },
+                symbol: 'AAPL',
+                symbolMapping: { YAHOO: 'AAPL' },
+                watchedByCount: 7
+              },
+              comment: 'Bought on a dip',
+              currency: 'USD',
+              fee: 19.9,
+              quantity: 50,
+              type: 'BUY',
+              unitPrice: 220.79,
+              value: 11039.5,
+              valueInBaseCurrency: 10123.4
+            }
+          ],
+          count: 1
+        },
+        paths: DEFAULT_REDACTED_PATHS
+      })
+    ).toStrictEqual({
+      activities: [
+        {
+          assetProfile: {
+            comment: null,
+            name: 'Apple Inc',
+            scraperConfiguration: null,
+            symbol: 'AAPL',
+            symbolMapping: null,
+            watchedByCount: null
+          },
+          comment: null,
+          currency: 'USD',
+          fee: null,
+          quantity: null,
+          type: 'BUY',
+          unitPrice: 220.79,
+          value: null,
+          valueInBaseCurrency: null
+        }
+      ],
+      count: 1
+    });
+  });
+
+  it('should redact the latest activities of a public portfolio', () => {
+    expect(
+      redactPaths({
+        object: {
+          latestActivities: [
+            {
+              assetProfile: {
+                currency: 'USD',
+                dataSource: 'YAHOO',
+                name: 'Apple Inc',
+                symbol: 'AAPL'
+              },
+              currency: 'USD',
+              date: '2021-11-30T23:00:00.000Z',
+              fee: 19.9,
+              quantity: 50,
+              type: 'BUY',
+              unitPrice: 220.79,
+              value: 11039.5,
+              valueInBaseCurrency: 10123.4
+            }
+          ]
+        },
+        paths: DEFAULT_REDACTED_PATHS
+      })
+    ).toStrictEqual({
+      latestActivities: [
+        {
+          assetProfile: {
+            currency: 'USD',
+            dataSource: 'YAHOO',
+            name: 'Apple Inc',
+            symbol: 'AAPL'
+          },
+          currency: 'USD',
+          date: '2021-11-30T23:00:00.000Z',
+          fee: null,
+          quantity: null,
+          type: 'BUY',
+          unitPrice: 220.79,
+          value: null,
+          valueInBaseCurrency: null
+        }
+      ]
+    });
   });
 });

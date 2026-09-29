@@ -106,8 +106,19 @@
             <th *matHeaderCellDef class="px-1" mat-header-cell mat-sort-header>
               <ng-container i18n>Data Source</ng-container>
             </th>
-            <td *matCellDef="let element" class="px-1" mat-cell>
-              {{ element.dataSource }}
+            <td
+              *matCellDef="let element"
+              class="line-height-normal px-1 text-nowrap"
+              mat-cell
+            >
+              <div>
+                {{ element.dataProviderInfo?.name ?? element.dataSource }}
+              </div>
+              @if (element.dataProviderInfo?.name) {
+                <div>
+                  <small class="text-muted">{{ element.dataSource }}</small>
+                </div>
+              }
             </td>
           </ng-container>
 
@@ -292,12 +303,12 @@
               <mat-menu #assetProfileActionsMenu="matMenu" xPosition="before">
                 <a
                   mat-menu-item
-                  [queryParams]="{
-                    assetProfileDialog: true,
-                    dataSource: element.dataSource,
-                    symbol: element.symbol
-                  }"
-                  [routerLink]="[]"
+                  [routerLink]="
+                    internalRoutes.adminControl.subRoutes.marketData.subRoutes.update.routerLink(
+                      element.dataSource,
+                      element.symbol
+                    )
+                  "
                 >
                   <span class="align-items-center d-flex">
                     <ion-icon class="mr-2" name="create-outline" />
@@ -370,5 +381,12 @@
     </div>
   </div>
 
-  <gf-fab [queryParams]="{ createAssetProfileDialog: true }" />
+  <gf-fab
+    [routerLink]="
+      internalRoutes.adminControl.subRoutes.marketData.subRoutes.create
+        .routerLink
+    "
+  />
 </div>
+
+<router-outlet />

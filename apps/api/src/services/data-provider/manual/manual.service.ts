@@ -14,7 +14,7 @@ import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/sy
 import {
   DATE_FORMAT,
   extractNumberFromString,
-  getYesterday
+  getStartOfUtcDateOfYesterday
 } from '@ghostfolio/common/helper';
 import {
   DataProviderHistoricalResponse,
@@ -24,6 +24,7 @@ import {
   ScraperConfiguration
 } from '@ghostfolio/common/interfaces';
 
+import { utc } from '@date-fns/utc';
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, SymbolProfile } from '@prisma/client';
 import * as cheerio from 'cheerio';
@@ -96,11 +97,11 @@ export class ManualService implements DataProviderInterface {
         let date = from;
 
         while (isBefore(date, to)) {
-          historical[format(date, DATE_FORMAT)] = {
+          historical[format(date, DATE_FORMAT, { in: utc })] = {
             marketPrice: defaultMarketPrice
           };
 
-          date = addDays(date, 1);
+          date = addDays(date, 1, { in: utc });
         }
 
         return historical;
@@ -114,7 +115,7 @@ export class ManualService implements DataProviderInterface {
       });
 
       return {
-        [format(getYesterday(), DATE_FORMAT)]: {
+        [format(getStartOfUtcDateOfYesterday(), DATE_FORMAT, { in: utc })]: {
           marketPrice: value
         }
       };
@@ -149,18 +150,21 @@ export class ManualService implements DataProviderInterface {
         })
       );
 
-      const marketData = await this.prismaService.marketData.findMany({
-        distinct: ['symbol'],
-        orderBy: {
-          date: 'desc'
-        },
-        take: symbols.length,
-        where: {
-          symbol: {
-            in: symbols
-          }
-        }
-      });
+      // Query the latest market data per symbol because distinct loads all
+      // the market data of the symbols into memory
+      const marketData = await Promise.all(
+        symbols.map((symbol) => {
+          return this.prismaService.marketData.findFirst({
+            orderBy: {
+              date: 'desc'
+            },
+            where: {
+              symbol,
+              dataSource: this.getName()
+            }
+          });
+        })
+      );
 
       const symbolProfilesToScrape = symbolProfiles.filter(
         ({ scraperConfiguration }) => {
@@ -201,7 +205,7 @@ export class ManualService implements DataProviderInterface {
         marketPrice =
           marketPrice ??
           marketData.find((marketDataItem) => {
-            return marketDataItem.symbol === symbol;
+            return marketDataItem?.symbol === symbol;
           })?.marketPrice ??
           0;
 
@@ -215,7 +219,7 @@ export class ManualService implements DataProviderInterface {
 
       return response;
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(error.message);
     }
 
     return {};

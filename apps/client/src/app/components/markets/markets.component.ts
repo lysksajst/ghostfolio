@@ -1,15 +1,15 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
+import { DEFAULT_LOCALE } from '@ghostfolio/common/config';
 import { resetHours } from '@ghostfolio/common/helper';
 import {
   Benchmark,
   HistoricalDataItem,
   InfoItem,
   MarketDataOfMarketsResponse,
-  ToggleOption,
   User
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
-import { FearAndGreedIndexMode } from '@ghostfolio/common/types';
+import { FearAndGreedIndexMode, ToggleOption } from '@ghostfolio/common/types';
 import { GfBenchmarkComponent } from '@ghostfolio/ui/benchmark';
 import { GfFearAndGreedIndexComponent } from '@ghostfolio/ui/fear-and-greed-index';
 import { GfLineChartComponent } from '@ghostfolio/ui/line-chart';
@@ -44,16 +44,19 @@ import { DeviceDetectorService } from 'ngx-device-detector';
   templateUrl: './markets.html'
 })
 export class GfMarketsComponent implements OnInit {
-  protected readonly benchmarks = signal<Benchmark[]>([]);
+  protected readonly DEFAULT_LOCALE = DEFAULT_LOCALE;
+
+  protected readonly benchmarks = signal<Benchmark[] | undefined>(undefined);
 
   protected readonly deviceType = computed(
     () => this.deviceDetectorService.deviceInfo().deviceType
   );
 
-  protected readonly fearAndGreedIndexModeOptions: ToggleOption[] = [
-    { label: $localize`Stocks`, value: 'STOCKS' },
-    { label: $localize`Cryptocurrencies`, value: 'CRYPTOCURRENCIES' }
-  ];
+  protected readonly fearAndGreedIndexModeOptions: ToggleOption<FearAndGreedIndexMode>[] =
+    [
+      { label: $localize`Stocks`, value: 'STOCKS' },
+      { label: $localize`Cryptocurrencies`, value: 'CRYPTOCURRENCIES' }
+    ];
 
   protected readonly fearLabel = $localize`Fear`;
   protected readonly greedLabel = $localize`Greed`;
@@ -118,8 +121,13 @@ export class GfMarketsComponent implements OnInit {
     this.dataService
       .fetchBenchmarks()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(({ benchmarks }) => {
-        this.benchmarks.set(benchmarks);
+      .subscribe({
+        error: () => {
+          this.benchmarks.set([]);
+        },
+        next: ({ benchmarks }) => {
+          this.benchmarks.set(benchmarks ?? []);
+        }
       });
   }
 

@@ -21,7 +21,8 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
-  Logger
+  Logger,
+  NotFoundException
 } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
@@ -99,6 +100,11 @@ export class WebAuthService {
   ): Promise<AuthDeviceDto> {
     const user = this.request.user;
     const expectedChallenge = user.authChallenge;
+
+    if (!expectedChallenge) {
+      throw new Error('Missing authentication challenge');
+    }
+
     let verification: VerifiedRegistrationResponse;
 
     try {
@@ -165,7 +171,7 @@ export class WebAuthService {
     const device = await this.deviceService.authDevice({ id: deviceId });
 
     if (!device) {
-      throw new Error('Device not found');
+      throw new NotFoundException('Device not found');
     }
 
     // Compute in the background during the biometric authentication
@@ -213,7 +219,7 @@ export class WebAuthService {
           id: isoBase64URL.fromBuffer(device.credentialId),
           publicKey: device.credentialPublicKey
         },
-        expectedChallenge: `${user.authChallenge}`,
+        expectedChallenge: `${user?.authChallenge}`,
         expectedOrigin: this.expectedOrigin,
         expectedRPID: this.rpID,
         requireUserVerification: false,
@@ -243,7 +249,7 @@ export class WebAuthService {
       });
 
       return this.jwtService.sign({
-        id: user.id
+        id: user?.id
       });
     }
 
@@ -277,7 +283,11 @@ export class WebAuthService {
       });
 
       const portfolioSnapshotKey =
-        this.redisCacheService.getPortfolioSnapshotKey({ filters, userId });
+        this.redisCacheService.getPortfolioSnapshotKey({
+          filters,
+          userId,
+          calculationType: userSettings.performanceCalculationType
+        });
 
       if (await this.isPortfolioSnapshotExpired(portfolioSnapshotKey)) {
         await this.portfolioSnapshotService.addJobToQueue({

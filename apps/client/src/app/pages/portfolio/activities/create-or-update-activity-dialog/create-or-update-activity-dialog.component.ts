@@ -1,5 +1,10 @@
+import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { ASSET_CLASS_MAPPING, DEFAULT_LOCALE } from '@ghostfolio/common/config';
+import {
+  ASSET_CLASS_MAPPING,
+  COMMENT_MAXIMUM_LENGTH,
+  DEFAULT_LOCALE
+} from '@ghostfolio/common/config';
 import { CreateOrderDto, UpdateOrderDto } from '@ghostfolio/common/dtos';
 import {
   getDateFormatString,
@@ -11,7 +16,7 @@ import {
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { validateObjectForForm } from '@ghostfolio/common/utils';
-import { GfEntityLogoComponent } from '@ghostfolio/ui/entity-logo';
+import { GfAccountSelectorComponent } from '@ghostfolio/ui/account-selector';
 import { translate } from '@ghostfolio/ui/i18n';
 import { DataService } from '@ghostfolio/ui/services';
 import { GfSymbolAutocompleteComponent } from '@ghostfolio/ui/symbol-autocomplete';
@@ -59,7 +64,7 @@ import { ActivityType } from './types/activity-type.type';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'h-100' },
   imports: [
-    GfEntityLogoComponent,
+    GfAccountSelectorComponent,
     GfSymbolAutocompleteComponent,
     GfTagsSelectorComponent,
     GfValueComponent,
@@ -78,6 +83,9 @@ import { ActivityType } from './types/activity-type.type';
   templateUrl: 'create-or-update-activity-dialog.html'
 })
 export class GfCreateOrUpdateActivityDialogComponent {
+  protected readonly COMMENT_MAXIMUM_LENGTH = COMMENT_MAXIMUM_LENGTH;
+  protected readonly DEFAULT_LOCALE = DEFAULT_LOCALE;
+
   protected activityForm: FormGroup;
 
   protected readonly assetClassOptions: AssetClassSelectorOption[] =
@@ -98,6 +106,7 @@ export class GfCreateOrUpdateActivityDialogComponent {
   protected hasPermissionToCreateOwnTag: boolean;
   protected isLoading = false;
   protected readonly isToday = isToday;
+  protected readonly labelAccount = $localize`Account`;
   protected mode: 'create' | 'update';
   protected tagsAvailable: Tag[] = [];
   protected total = 0;
@@ -114,6 +123,9 @@ export class GfCreateOrUpdateActivityDialogComponent {
   private readonly dialogRef =
     inject<MatDialogRef<GfCreateOrUpdateActivityDialogComponent>>(MatDialogRef);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly impersonationStorageService = inject(
+    ImpersonationStorageService
+  );
   private locale = inject<string>(MAT_DATE_LOCALE);
   private readonly userService = inject(UserService);
 
@@ -121,18 +133,15 @@ export class GfCreateOrUpdateActivityDialogComponent {
     addIcons({ calendarClearOutline, refreshOutline });
   }
 
-  protected get selectedAccount() {
-    return this.data.accounts.find(({ id }) => {
-      return id === this.activityForm.get('accountId')?.value;
-    });
-  }
-
   public ngOnInit() {
     this.currencyOfAssetProfile = this.data.activity?.assetProfile?.currency;
-    this.hasPermissionToCreateOwnTag = hasPermission(
-      this.data.user?.permissions,
-      permissions.createOwnTag
-    );
+
+    // A tag created during an impersonation belongs to the authenticated user,
+    // hence it cannot be assigned to the data of the impersonated user
+    this.hasPermissionToCreateOwnTag =
+      !this.impersonationStorageService.getId() &&
+      hasPermission(this.data.user?.permissions, permissions.createOwnTag);
+
     this.locale = this.data.user.settings.locale ?? DEFAULT_LOCALE;
     this.mode = this.data.activity?.id ? 'update' : 'create';
 
@@ -144,7 +153,9 @@ export class GfCreateOrUpdateActivityDialogComponent {
     this.defaultDateFormat = getDateFormatString(this.locale);
 
     this.dataService
-      .fetchPortfolioHoldings()
+      .fetchPortfolioHoldings({
+        filters: [{ id: 'ACTIVE', type: 'HOLDING_TYPE' }]
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ holdings }) => {
         this.defaultLookupItems = holdings

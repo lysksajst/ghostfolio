@@ -52,11 +52,11 @@
       <gf-benchmark
         [benchmarks]="benchmarks()"
         [deviceType]="deviceType()"
-        [locale]="user?.settings?.locale || undefined"
+        [locale]="user?.settings?.locale ?? DEFAULT_LOCALE"
         [showSymbol]="false"
         [user]="user"
       />
-      @if (benchmarks()?.length > 0) {
+      @if (benchmarks()?.length) {
         <div
           class="gf-text-wrap-balance line-height-1 mt-3 text-center text-muted"
         >

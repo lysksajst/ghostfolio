@@ -5,7 +5,539 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 3.75.0 - 2026-09-28
+
+### Changed
+
+- Extended the net performance on the analysis page to include the dividends (experimental)
+- Extended the net performance in the portfolio summary to include the dividends (experimental)
+- Improved the get quotes functionality of the _Manual_ service
+- Migrated the historical market data editor dialog from `ngModel` to form control
+- Migrated the _ESLint_ configuration to the flat config format without `FlatCompat`
+- Upgraded `chartjs-chart-treemap` from version `4.2.0` to `4.2.2`
+
+### Fixed
+
+- Fixed an issue where holdings without a quote have been valued at the unit price of the latest activity instead of the latest market price
+- Fixed the discovery of the _OpenID Connect_ (`OIDC`) configuration for issuer URLs with a trailing slash (experimental)
+
+## 3.74.0 - 2026-09-27
+
+### Added
+
+- Added the dividend performance to the analysis page (experimental)
+
+### Changed
+
+- Simplified the portfolio summary by hiding the currency on mobile
+- Improved the performance of the logo endpoints by enabling the browser cache
+- Improved the language localization for Catalan (`ca`)
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed the wrapping of the name column in the accounts table component on mobile
+- Fixed the sorting of the watchlist for asset profiles without a name
+
+## 3.73.0 - 2026-09-26
+
+### Changed
+
+- Improved the server of the Model Context Protocol (MCP) to list only the tools covered by the scopes of the access (experimental)
+- Refreshed the cryptocurrencies list
+- Improved the language localization for Catalan (`ca`)
+- Upgraded `@rekog/mcp-nest` from version `2.0.2` to `2.0.7`
+- Upgraded `bull-board` from version `9.9.0` to `9.10.1`
+- Upgraded `zod` from version `4.5.4` to `4.6.5`
+
+### Fixed
+
+- Fixed the value of the holdings excluded from analysis in the portfolio summary
+
+## 3.72.0 - 2026-09-20
+
+### Added
+
+- Added a tool to get the watchlist to the server of the Model Context Protocol (MCP) (experimental)
+
+### Changed
+
+- Extended the cache key of the portfolio snapshot by the performance calculation type
+- Hardened the validation of the device id in the biometric authentication
+- Upgraded `stripe` from version `22.5.0` to `22.6.2`
+
+### Fixed
+
+- Fixed the net performance percentage of date ranges in the portfolio performance calculation by including the gross performance at the start date
+
+## 3.71.0 - 2026-09-19
+
+### Added
+
+- Added a hint for the performance calculation type to the analysis page
+- Added support for country codes to the entity logo component and used it for cash holdings and currency selectors
+
+### Changed
+
+- Localized the default account name created during user registration
+- Improved the performance of the watchlist by removing an unnecessary index from the market data table
+- Improved the performance of deleting a watchlist item
+- Extended the `POST api/v1/user` endpoint by the language code
+- Improved the language localization for German (`de`)
+- Upgraded `@internationalized/number` from version `3.6.7` to `3.6.8`
+- Upgraded `bull-board` from version `9.8.0` to `9.9.0`
+- Upgraded `marked` from version `17.0.2` to `18.0.12`
+- Upgraded `ngx-markdown` from version `22.0.0` to `22.0.2`
+
+### Fixed
+
+- Fixed the missing account balance of the current day for users in a time zone ahead of the instance
+
+## 3.70.1 - 2026-09-14
+
+### Added
+
+- Added the holdings table to the overview tab of the home page on desktop (experimental)
+- Added a tool to search for asset profiles to the server of the Model Context Protocol (MCP) (experimental)
+
+### Changed
+
+- Improved the style of the activity type filter on the activities page (experimental)
+- Improved the style of the no activities info component
+- Improved the style of the selector in the benchmark comparator
+- Improved the responsive layout of the holdings table in simplified mode
+- Improved the language localization for Chinese (`zh`)
+- Improved the language localization for German (`de`)
+- Upgraded `@codewithdan/observable-store` from version `2.2.15` to `3.0.0`
+- Upgraded `bull-board` from version `9.5.0` to `9.8.0`
+- Upgraded `papaparse` from version `5.5.3` to `5.7.0`
+- Upgraded `zone.js` from version `0.16.2` to `0.16.3`
+
+### Fixed
+
+- Hardened the authentication with _OpenID Connect_ (`OIDC`) (experimental)
+
+## 3.69.0 - 2026-09-07
+
+### Changed
+
+- Improved the loading state of the activity count in the portfolio summary
+- Migrated the create dialog of the watchlist to a dedicated route
+- Changed the holdings endpoint to return active and closed holdings by default and reuse a single snapshot for both types
+- Upgraded `countries-and-timezones` from version `3.9.0` to `3.10.0`
+- Upgraded `bull-board` from version `9.0.1` to `9.5.0`
+- Upgraded `zod` from version `4.4.3` to `4.5.4`
+
+### Fixed
+
+- Resolved an issue when opening an asset profile from the watchlist
+
+## 3.68.0 - 2026-09-06
+
+### Added
+
+- Added a simplified mode to the holdings table component
+
+### Changed
+
+- Made the details of holdings excluded from analysis accessible via the activities table
+- Migrated the asset profile dialogs of the market data management in the admin control panel to dedicated routes
+
+## 3.67.1 - 2026-09-05
+
+### Added
+
+- Introduced a DTO for the query parameters of the asset profiles endpoint
+- Introduced a DTO for the query parameters of the symbol lookup endpoints
+
+### Changed
+
+- Improved the server of the Model Context Protocol (MCP) (experimental)
+- Introduced a maximum length for the comment in the API endpoints
+- Introduced a maximum length for the search query and the symbol in the API endpoints
+- Hardened the validation of the query parameters (`accounts`, `assetClasses`, `dataSource` and `tags`) in the API endpoints with filters
+- Upgraded `nestjs` from version `11.1.28` to `11.2.3`
+- Upgraded `ngx-skeleton-loader` from version `12.0.0` to `13.0.0`
+
+### Fixed
+
+- Fixed the missing icon of the expiration date picker in the create or update access dialog
+- Fixed the data provider information in the holding detail dialog
+- Fixed the storage of the market data in the data provider service to only include the newly fetched quotes
+- Fixed the immediate expiration of a portfolio snapshot with errors
+- Fixed the missing country mapping of _Congo (Dem. Rep. of the)_ and _Congo (Rep. of)_ in the _Financial Modeling Prep_ service
+
+## 3.66.0 - 2026-09-03
+
+### Changed
+
+- Moved the details of the granted access from the table to the dialog on the access page (experimental)
+- Restricted the _Restricted view and manage_ permission of the access to share the portfolio to the Model Context Protocol (MCP) (experimental)
+- Migrated the transfer cash balance dialog to a dedicated route
+- Improved the language localization for Italian (`it`)
+- Upgraded `@rekog/mcp-nest` from version `2.0.0` to `2.0.2`
+- Upgraded `prisma` from version `7.9.1` to `7.10.0`
+
+### Fixed
+
+- Fixed the loading state of the accounts table on the accounts page
+- Fixed the loading state of the holdings table on the portfolio holdings page
+
+## 3.65.0 - 2026-08-31
+
+### Added
+
+- Added a tool to import activities into the portfolio to the server of the Model Context Protocol (MCP) (experimental)
+
+### Changed
+
+- Extended the access to share the portfolio to support the _Restricted view and manage_ permission (experimental)
+- Extended the tool to get the accounts of the portfolio in the server of the Model Context Protocol (MCP) to support the filtering by account (experimental)
+- Upgraded `replace-in-file` from version `8.4.0` to `9.0.0`
+- Upgraded `stripe` from version `22.3.2` to `22.5.0`
+- Upgraded `undici` from version `8.5.0` to `8.10.0`
+- Upgraded `uuid` from version `14.0.1` to `14.0.2`
+
+### Fixed
+
+- Fixed the cash positions being included in the by continent, by country and by sector charts on the allocations page and the public page
+- Fixed the allocations in percentage exceeding 100% in the restricted view
+- Fixed the portfolio calculation for holdings with activities before the first known historical market price by falling back to the unit price of the activity
+- Fixed the additional data point at the start of the chart in the holding detail dialog for instances running in a time zone other than UTC
+- Fixed the missing country mapping of _Virgin Islands (British)_ in the _Financial Modeling Prep_ service
+
+## 3.64.0 - 2026-08-30
+
+### Added
+
+- Added the support for the filters of the assistant to the accounts page
+- Added a tool to get the accounts of the portfolio to the server of the Model Context Protocol (MCP) (experimental)
+- Extended the `GET api/v1/account` endpoint by the filters `accounts`, `assetClasses` and `tags`
+
+### Changed
+
+- Restricted the support for filtering to the public access to share the portfolio (experimental)
+- Improved the language localization for German (`de`)
+- Upgraded `twitter-api-v2` from version `1.29.0` to `1.29.1`
+- Upgraded `zone.js` from version `0.16.1` to `0.16.2`
+
+### Fixed
+
+- Fixed the redaction of `fee`, `quantity`, `value` and `valueInBaseCurrency` in the latest activities of the public page (experimental)
+
+## 3.63.0 - 2026-08-28
+
+### Added
+
+- Added the _Restricted view and manage_ permission to the access to share the portfolio (experimental)
+- Added a tool to get the activities of the portfolio to the server of the Model Context Protocol (MCP) (experimental)
+
+### Changed
+
+- Improved the loading state of the symbol autocomplete component
+- Consolidated the duplicated translations of the asset classes and asset sub classes
+- Changed the holdings in the portfolio endpoints from a map keyed by the symbol to an array
+
+### Fixed
+
+- Improved the handling of indices in the _Financial Modeling Prep_ service
+- Fixed the portfolio calculation for holdings with the same symbol from different data sources
+
+## 3.62.0 - 2026-08-27
+
+### Added
+
+- Added an expiration date to the access to share the portfolio
+- Added the date of the last usage to the access to share the portfolio
+- Added support for a dedicated _OpenRouter_ engine for the `web_fetch` tool in the `FetchService`
+
+### Changed
+
+- Improved the language localization of the asset classes and asset sub classes in the holdings table of the _Copy AI prompt to clipboard for analysis_ action on the analysis page (experimental)
+- Improved the language localization of the asset classes and asset sub classes in the holdings table of the _Copy portfolio data to clipboard for AI prompt_ action on the analysis page (experimental)
+- Improved the logging of the `web_fetch` tool in the `FetchService`
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed the date of the exchange rates for instances running in a time zone other than UTC
+- Fixed the date of the chart in the holding detail dialog for instances running in a time zone other than UTC
+- Fixed the date of the historical market data gathering endpoint for a specific date for instances running in a time zone other than UTC
+- Fixed the validation of the date in the historical market data gathering endpoint for a specific date
+
+## 3.61.0 - 2026-08-25
+
+### Changed
+
+- Harmonized the icons and labels in the access table to share the portfolio
+- Improved the data source column in the historical market data table of the admin control panel by showing the name of the data provider
+- Migrated the create and edit access dialogs to dedicated routes
+- Improved the validation of activities and asset profiles when combining a custom asset profile symbol with a data source other than `MANUAL`
+- Improved the response of the historical market data gathering endpoint for a specific date
+- Introduced a timeout for the asset profile and the historical market data gathering jobs
+- Reduced the number of attempts of the asset profile and the historical market data gathering jobs
+- Improved the historical market data gathering by loading the asset profiles with recent market data in a single database query per run
+- Upgraded `bull-board` from version `8.6.0` to `9.0.1`
+
+### Fixed
+
+- Fixed the missing benchmark in the performance chart for calendar year date ranges on the analysis page
+- Fixed the country mapping of Macau in the _Financial Modeling Prep_ service
+- Fixed the asset profile and historical market data gathering of a symbol getting blocked permanently by a failed job by discarding the failed jobs
+- Fixed the asset profile data gathering of a symbol in the admin control panel by removing an existing job before enqueueing a new one
+- Fixed the date of the gathered historical market data for instances running in a time zone other than UTC
+- Fixed the repeated historical market data gathering for instances running in a time zone other than UTC
+
+## 3.60.0 - 2026-08-24
+
+### Added
+
+- Added `isCarriedForward` to the `MarketData` database schema
+
+### Changed
+
+- Improved the style of the table in the data providers management of the admin control panel
+- Improved the style of the table in the platform management of the admin control panel
+- Improved the style of the table in the tag management of the admin control panel
+- Improved the historical market data gathering by storing the market prices carried forward for the most recent dates without data from the data provider, distinguished by `isCarriedForward`
+- Introduced a cooldown of 12 hours for the historical market data gathering of a symbol by retaining the completed jobs
+
+### Fixed
+
+- Fixed the repeated historical market data gathering for symbols without weekend market data on Sundays and Mondays
+
+## 3.59.1 - 2026-08-23
+
+### Added
+
+- Added support to remove a received access on the access page
+- Extended the holdings table by the activities count in the _Copy AI prompt to clipboard for analysis_ action on the analysis page (experimental)
+- Extended the holdings table by the activities count in the _Copy portfolio data to clipboard for AI prompt_ action on the analysis page (experimental)
+- Extended the holdings table by the date of first activity in the _Copy AI prompt to clipboard for analysis_ action on the analysis page (experimental)
+- Extended the holdings table by the date of first activity in the _Copy portfolio data to clipboard for AI prompt_ action on the analysis page (experimental)
+- Added a server of the Model Context Protocol (MCP) with a tool to get the holdings of the portfolio (experimental)
+- Added the `type` to the `Access` database schema
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed an issue in the create or update access dialog where a public access could not be updated (experimental)
+- Fixed the performance calculation for dates without historical market data by carrying forward the market price from dates with activities
+
+## 3.58.0 - 2026-08-22
+
+### Changed
+
+- Improved the type filter of the activities table on the activities page to only list the activity types in use (experimental)
+- Improved the permission selector with icons in the create or update access dialog
+- Extracted the access level icon to a reusable component
+- Disabled the telemetry in the _Storybook_ setup
+- Improved the indexes of the order database table
+- Upgraded the `Node.js` engine from version `>=22.18.0` to `>=22.22.3` (`package.json`)
+
+### Fixed
+
+- Fixed the benchmark label in the tooltip of the benchmark comparator on the analysis page
+- Fixed the _Storybook_ setup by loading the `@angular/localize` polyfill centrally
+- Fixed an issue in the activities import where an unused custom asset profile was created if the related activities were not imported
+- Fixed the missing close price in the historical market data of the _Yahoo Finance_ service by falling back to the market price of the quote
+- Fixed the historical market data gathering by no longer storing the last known market price for the most recent dates without data from the data provider
+
+## 3.57.0 - 2026-08-21
+
+### Added
+
+- Added the permission to manage data to the grant access dialog and to the access table to share the portfolio (experimental)
+
+### Changed
+
+- Extended the account selector options to include the platform and currency
+- Improved the error handling of the `AuthGuard`
+- Improved the language localization for German (`de`)
+- Improved the language localization for Japanese (`ja`)
+- Upgraded `yahoo-finance2` from version `4.0.0` to `4.0.2`
+
+## 3.56.0 - 2026-08-20
+
+### Changed
+
+- Improved the sorting to be case-insensitive in the account selector component
+- Refactored the services to use the `@Service()` decorator of _Angular_
+- Removed the deprecated `permissions` attribute of the access in favor of the scopes
+
+## 3.55.0 - 2026-08-19
+
+### Added
+
+- Added the write scopes to the access
+- Added support to merge an asset profile into an existing asset profile in the asset profile dialog of the admin control panel (experimental)
+
+### Changed
+
+- Improved the usability of the account selectors in the transfer cash balance dialog
+- Improved the performance of the portfolio snapshot calculation by indexing the activities
+- Improved the language localization for German (`de`)
+- Improved the language localization for Spanish (`es`)
+- Updated `angular-developer` skills
+- Upgraded `angular` from version `21.2.19` to `22.1.2`
+- Upgraded `ngx-device-detector` from version `11.0.0` to `12.0.0`
+- Upgraded `ngx-markdown` from version `21.2.0` to `22.0.0`
+
+## 3.54.0 - 2026-08-18
+
+### Changed
+
+- Improved the style of the toggle component
+- Moved the improved symbol lookup results by removing the currency from the name of cryptocurrencies from experimental to general availability
+- Extracted the account selector to a reusable component
+- Upgraded `ng-extract-i18n-merge` from `3.3.0` to `3.4.0`
+
+### Fixed
+
+- Fixed the missing mapping for Macau in the data enhancer for asset profile data via _Trackinsight_
+
+## 3.53.0 - 2026-08-16
+
+### Changed
+
+- Upgraded `angular` from version `21.2.7` to `21.2.19`
+- Upgraded `Nx` from version `23.0.2` to `23.1.1`
+- Upgraded `storybook` from version `10.1.10` to `10.5.7`
+
+### Fixed
+
+- Fixed the internal server error on a failed social login by redirecting to the login page
+
+## 3.52.0 - 2026-08-15
+
+### Added
+
+- Added the business logic and tests for stock splits of an asset profile (experimental)
+- Added the scopes to the access
+- Added an index for `symbolProfileId` to the order database table
+
+### Changed
+
+- Restricted the creation of tags to unique names in the tags selector component
+- Changed the redaction of the monetary values in impersonation mode to be based on the scopes of the access
+- Deprecated the `permissions` attribute of the access in favor of the scopes
+- Extended the `GET api/v1/access` endpoint by the scopes
+- Extended the `GET api/v1/user` endpoint by the scopes
+- Improved the performance of deleting activities by loading only the required data
+
+### Fixed
+
+- Fixed the missing currency conversion of the dividends on the analysis page
+- Fixed the missing error state in the watchlist
+- Fixed the missing loading indicator in the benchmarks of the markets overview
+- Fixed the incorrect error log output when deleting activities
+
+## 3.51.0 - 2026-08-14
+
+### Changed
+
+- Simplified the error log output of the data provider and queue services by omitting the stack trace
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed the cash balance update related to activities in a custom currency
+- Fixed the empty historical market data of the asset profile dialog of the admin control panel for asset profiles without activities
+- Fixed the missing mapping for Czech Republic in the country weightings of the _Financial Modeling Prep_ service
+- Fixed the missing mapping for Macau in the data enhancer for asset profile data via _Yahoo Finance_
+- Fixed the outdated exchange rates of currency pairs which are calculated indirectly via the base currency
+
+## 3.50.0 - 2026-08-13
+
+### Changed
+
+- Refreshed the cryptocurrencies list
+- Upgraded `countries-list` from version `3.4.0` to `3.4.1`
+
+### Fixed
+
+- Fixed the performance of closed positions in the portfolio calculator caused by a rounding remainder in the investment
+- Fixed the missing mapping for Turkey in the country weightings of the _Financial Modeling Prep_ service
+- Fixed the missing mapping for Czech Republic and Turkey in the data enhancer for asset profile data via _Yahoo Finance_
+- Resolved an error when fetching dividends from _Yahoo Finance_ for date ranges without events
+
+## 3.49.0 - 2026-08-12
+
+### Changed
+
+- Improved the wording of the _X-ray_ page to use a neutral form
+- Improved the style of the disabled base currency in the user account settings
+- Moved the support to clone an activity in the account detail dialog from experimental to general availability
+- Moved the support to clone an activity in the holding detail dialog from experimental to general availability
+- Moved the support to edit an activity in the account detail dialog from experimental to general availability
+- Moved the support to edit an activity in the holding detail dialog from experimental to general availability
+- Removed the deprecated `isDraft` attribute of the activity in favor of the _Draft_ tag
+- Improved the language localization for German (`de`)
+
+## 3.48.1 - 2026-08-11
+
+### Added
+
+- Added the quantity to the accounts tab of the holding detail dialog (experimental)
+
+### Changed
+
+- Improved the performance of the _X-ray_ page by resolving the user only once per request
+- Refactored the impersonation mode to resolve the impersonated user once per request in a guard instead of in every endpoint
+- Restricted the modification of data in impersonation mode to the data of the authenticated user
+- Restricted the update of the user settings in impersonation mode to the settings of the authenticated user
+
+### Fixed
+
+- Fixed the allocation in the accounts tab of the holding detail dialog caused by floating-point rounding
+- Fixed the allocation in the accounts tab of the holding detail dialog by excluding the cash balance of the account
+- Fixed the account aggregations in impersonation mode to be based on the impersonated user
+- Fixed the base currency of the activities in impersonation mode to be based on the impersonated user
+- Fixed the base currency of the dividends in impersonation mode to be based on the impersonated user
+- Fixed the base currency of the user account settings in impersonation mode to be disabled
+- Fixed the benchmark of the performance chart in impersonation mode to be based on the authenticated user
+- Fixed the emergency fund of the _X-ray_ page in impersonation mode to be based on the impersonated user
+- Fixed the redaction of the emergency fund, projected total amount and savings rate in a restricted view
+- Fixed the rules of the _X-ray_ page to be withheld in a restricted view
+- Fixed the savings rate of the _FIRE_ calculator in impersonation mode to be presented
+- Fixed the user settings in impersonation mode to be based on the impersonated user
+- Fixed the validation of the impersonation identifier of an unknown user
+
+## 3.47.0 - 2026-08-10
+
+### Changed
+
+- Extended the toggle component to support a disabled state
+- Extended the toggle component to support icons
+- Reused the toggle component on the portfolio holdings page
+- Reused the currency selector component in the user account settings
+
+### Fixed
+
+- Fixed the handling of the disabled state in the currency selector and symbol autocomplete components
+- Fixed the restoration of the current selection in the currency selector component when leaving the field without picking an option
+
+## 3.46.0 - 2026-08-09
+
+### Added
+
+- Added the _Draft_ tag, assigned automatically to activities dated in the future
+
+### Changed
+
+- Deprecated the `isDraft` attribute of the activity in favor of the _Draft_ tag
+- Changed the activities count of an account to include draft activities
+- Extended the _Draft_ tag to activities with a custom asset profile of type `BUY`
+- Improved the language localization for German (`de`)
+- Upgraded `bull-board` from version `8.1.2` to `8.6.0`
+
+### Fixed
+
+- Fixed the dividend and interest of an account by excluding draft activities
+- Resolved an issue with unknown country names in the country weightings of the _Financial Modeling Prep_ service
+- Resolved an issue with unknown country names in the data enhancer for asset profile data via _Trackinsight_
+
+## 3.45.0 - 2026-08-08
 
 ### Added
 
@@ -13,10 +545,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Aligned the x-axis of the dividend and investment timeline charts on the analysis page
 - Improved the check for duplicates in the preview step of the activities import (regardless of the account)
 - Improved the check for duplicates in the preview step of the import dividends dialog (regardless of the account)
 - Extended the activities import to reuse an existing account of the user by name and currency
 - Extended the activities import to resolve an ISIN to the symbol of the data provider
+- Improved the style of the placeholder in the entity logo component
+- Migrated the create, detail and edit account dialogs to dedicated routes
+- Improved the language localization for German (`de`)
 
 ### Fixed
 

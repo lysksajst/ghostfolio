@@ -1,7 +1,4 @@
 :host {
-  align-items: center;
-  display: flex;
-
   .logo {
     border-radius: 0.2rem;
     height: 0.8rem;
@@ -10,16 +7,15 @@
     &.large {
       height: 1.4rem;
       width: 1.4rem;
+
+      .emoji {
+        font-size: 1.9rem;
+      }
     }
 
-    &.placeholder {
-      border: 1px solid rgba(var(--dark-dividers));
+    .emoji {
+      font-size: 1.1rem;
+      inset: 0;
     }
-  }
-}
-
-:host-context(.theme-dark) {
-  .placeholder {
-    border-color: rgba(var(--light-dividers));
   }
 }

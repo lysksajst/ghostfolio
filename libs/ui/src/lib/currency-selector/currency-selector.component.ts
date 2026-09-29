@@ -1,7 +1,4 @@
-import {
-  getCountryCodeFromCurrency,
-  getEmojiFlag
-} from '@ghostfolio/common/helper';
+import { getCountryCodeFromCurrency } from '@ghostfolio/common/helper';
 
 import { FocusMonitor } from '@angular/cdk/a11y';
 import {
@@ -40,6 +37,7 @@ import {
 import { MatInput, MatInputModule } from '@angular/material/input';
 import { map, startWith } from 'rxjs/operators';
 
+import { GfEntityLogoComponent } from '../entity-logo/entity-logo.component';
 import { AbstractMatFormField } from '../shared/abstract-mat-form-field';
 
 @Component({
@@ -51,6 +49,7 @@ import { AbstractMatFormField } from '../shared/abstract-mat-form-field';
   },
   imports: [
     FormsModule,
+    GfEntityLogoComponent,
     MatAutocompleteModule,
     MatFormFieldModule,
     MatInputModule,
@@ -81,6 +80,7 @@ export class GfCurrencySelectorComponent
   private readonly destroyRef = inject(DestroyRef);
   private readonly formField = inject(MAT_FORM_FIELD);
   private readonly input = viewChild.required(MatInput);
+  private lastSelectedCurrency: string | null = null;
 
   public constructor(
     public override readonly _elementRef: ElementRef,
@@ -98,36 +98,38 @@ export class GfCurrencySelectorComponent
     return { elementRef: this.formField.getConnectedOverlayOrigin() };
   }
 
-  public get emojiFlagOfSelectedCurrency() {
+  public get countryCodeOfSelectedCurrency() {
     const selectedCurrency = this.currencies().find((currency) => {
       return currency === this.control.value;
     });
 
-    return this.getEmojiFlagFromCurrency(selectedCurrency);
+    return getCountryCodeFromCurrency(selectedCurrency);
   }
 
   public override get empty() {
     return !this.control.value;
   }
 
+  public override get value() {
+    return super.value;
+  }
+
   public override set value(value: string | null) {
     this.control.setValue(value);
     super.value = value;
+
+    this.lastSelectedCurrency = value;
   }
 
   public focus() {
     this.input().focus();
   }
 
-  public getEmojiFlagFromCurrency(aCurrency = '') {
-    return getEmojiFlag(getCountryCodeFromCurrency(aCurrency));
+  public getCountryCodeFromCurrency(aCurrency = '') {
+    return getCountryCodeFromCurrency(aCurrency);
   }
 
   public ngOnInit() {
-    if (this.disabled) {
-      this.control.disable();
-    }
-
     const formGroup = this.formGroupDirective.form;
 
     if (formGroup) {
@@ -170,8 +172,23 @@ export class GfCurrencySelectorComponent
     }
   }
 
+  public onPanelClosed() {
+    // Typing clears the selected currency, so restore the last selection once
+    // the panel closes without an option having been picked. An empty input is
+    // left untouched to allow clearing the currency.
+    if (super.value || !this.control.value) {
+      return;
+    }
+
+    this.value = this.lastSelectedCurrency;
+
+    this.changeDetectorRef.markForCheck();
+  }
+
   public onUpdateCurrency({ option }: { option: MatOption<string> }) {
     super.value = option.value;
+
+    this.lastSelectedCurrency = option.value;
   }
 
   private filter(value: string) {

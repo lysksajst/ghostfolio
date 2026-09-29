@@ -1,5 +1,7 @@
+import { utc } from '@date-fns/utc';
 import { NumberParser } from '@internationalized/number';
 import {
+  AccessType,
   Type as ActivityType,
   AssetProfileOverrides,
   AssetSubClass,
@@ -9,11 +11,15 @@ import {
 } from '@prisma/client';
 import { Big } from 'big.js';
 import { isISO4217CurrencyCode, isUUID } from 'class-validator';
+import { countries } from 'countries-list';
 import {
+  addDays,
   getDate,
   getMonth,
   getYear,
+  isAfter,
   isMatch,
+  isValid,
   parse,
   parseISO,
   subDays
@@ -43,6 +49,7 @@ import {
   ghostfolioFearAndGreedIndexSymbolStocks,
   ghostfolioPrefix,
   SEARCH_QUERY_MINIMUM_LENGTH,
+  TAG_ID_DRAFT,
   TAG_ID_EXCLUDE_FROM_ANALYSIS,
   TAG_IDS_SYSTEM
 } from './config';
@@ -50,13 +57,39 @@ import {
   AssetProfileIdentifier,
   AssetProfileItem,
   Benchmark,
-  PortfolioPosition
+  PortfolioPosition,
+  UserSettings
 } from './interfaces';
 import { BenchmarkTrend, ColorScheme } from './types';
 
 export const DATE_FORMAT = 'yyyy-MM-dd';
 export const DATE_FORMAT_MONTHLY = 'MMMM yyyy';
 export const DATE_FORMAT_YEARLY = 'yyyy';
+
+// Settings which describe the person looking at the screen rather than the
+// portfolio being looked at. They stay with the authenticated user while
+// impersonating. Every other setting follows the impersonated user.
+// The filters are included because they are always written back to the
+// authenticated user, so reading them from the impersonated user would
+// overwrite the filters of the authenticated user.
+const USER_SETTINGS_KEYS_OF_AUTHENTICATED_USER: (keyof UserSettings)[] = [
+  'benchmark',
+  'colorScheme',
+  'dateRange',
+  'filters.accounts',
+  'filters.assetClasses',
+  'filters.dataSource',
+  'filters.symbol',
+  'filters.tags',
+  'holdingsViewMode',
+  'isExperimentalFeatures',
+  'isRestrictedView',
+  'language',
+  'locale',
+  'viewMode'
+];
+
+const VALID_COUNTRY_CODES = new Set([...Object.keys(countries), 'EU']);
 
 export function applyAssetProfileOverrides<T extends Partial<SymbolProfile>>(
   assetProfile: T,
@@ -147,6 +180,10 @@ export function calculateMovingAverage({
     .toNumber();
 }
 
+export function canApplyFiltersToAccess({ type }: { type: AccessType }) {
+  return type === 'PUBLIC';
+}
+
 export function canDeleteAssetProfile({
   activitiesCount,
   isBenchmark,
@@ -160,9 +197,8 @@ export function canDeleteAssetProfile({
     activitiesCount === 0 &&
     !isBenchmark &&
     !isDerivedCurrency(getCurrencyFromSymbol(symbol)) &&
+    !isFearAndGreedIndexSymbol(symbol) &&
     !isRootCurrency(getCurrencyFromSymbol(symbol)) &&
-    symbol !== ghostfolioFearAndGreedIndexSymbolCryptocurrencies &&
-    symbol !== ghostfolioFearAndGreedIndexSymbolStocks &&
     watchedByCount === 0
   );
 }
@@ -177,6 +213,21 @@ export function canDeleteUser({
   return currentUserId !== userId;
 }
 
+export function canMergeAssetProfile({
+  isBenchmark = false,
+  splitsCount = 0,
+  symbol
+}: Pick<AssetProfileItem, 'isBenchmark' | 'symbol'> & {
+  splitsCount?: number;
+}): boolean {
+  return (
+    !isBenchmark &&
+    !isCurrencySymbol(symbol) &&
+    !isFearAndGreedIndexSymbol(symbol) &&
+    splitsCount === 0
+  );
+}
+
 export function canOpenHoldingDetail({
   assetProfile
 }: Pick<PortfolioPosition, 'assetProfile'>): boolean {
@@ -185,6 +236,22 @@ export function canOpenHoldingDetail({
 
 export function capitalize(aString: string) {
   return aString.charAt(0).toUpperCase() + aString.slice(1).toLowerCase();
+}
+
+export function convertValuesToPercentagesOfTotal({
+  total,
+  values
+}: {
+  total: number;
+  values: { [key: string]: { value: number } };
+}) {
+  if (!total) {
+    return;
+  }
+
+  for (const item of Object.values(values)) {
+    item.value = item.value / total;
+  }
 }
 
 export function downloadAsFile({
@@ -234,6 +301,21 @@ export function extractNumberFromString({
   } catch {
     return undefined;
   }
+}
+
+export function formatAssetProfileName({
+  assetSubClass,
+  name
+}: {
+  assetSubClass?: AssetSubClass;
+  name?: string;
+}) {
+  if (assetSubClass === 'CRYPTOCURRENCY') {
+    // Remove DEFAULT_CURRENCY at the end of cryptocurrency names
+    return name?.replace(new RegExp(` ${DEFAULT_CURRENCY}$`), '');
+  }
+
+  return name;
 }
 
 export function formatMonthAndYear({
@@ -360,15 +442,15 @@ export function getDateWithTimeFormatString(aLocale?: string) {
 }
 
 export function getEmojiFlag(aCountryCode: string) {
-  if (!aCountryCode) {
-    return aCountryCode;
+  const countryCode = aCountryCode?.toUpperCase();
+
+  if (!countryCode || !VALID_COUNTRY_CODES.has(countryCode)) {
+    return undefined;
   }
 
-  return aCountryCode
-    .toUpperCase()
-    .replace(/./g, (character) =>
-      String.fromCodePoint(127397 + character.charCodeAt(0))
-    );
+  return countryCode.replace(/./g, (character) => {
+    return String.fromCodePoint(127397 + character.charCodeAt(0));
+  });
 }
 
 export function getLocale() {
@@ -408,6 +490,14 @@ export function getStartOfUtcDate(aDate: Date) {
   date.setUTCHours(0, 0, 0, 0);
 
   return date;
+}
+
+export function getStartOfUtcDateOfTomorrow() {
+  return addDays(getStartOfUtcDate(new Date()), 1, { in: utc });
+}
+
+export function getStartOfUtcDateOfYesterday() {
+  return subDays(getStartOfUtcDate(new Date()), 1, { in: utc });
 }
 
 export function getStringOrNull(aString: string | null | undefined) {
@@ -451,14 +541,6 @@ export function getTextColor(aColorScheme: ColorScheme) {
   return `${r}, ${g}, ${b}`;
 }
 
-export function getToday() {
-  const year = getYear(new Date());
-  const month = getMonth(new Date());
-  const day = getDate(new Date());
-
-  return new Date(Date.UTC(year, month, day));
-}
-
 export function getUtc(aDateString: string) {
   const [yearString, monthString, dayString] = aDateString.split('-');
 
@@ -469,14 +551,6 @@ export function getUtc(aDateString: string) {
       parseInt(dayString, 10)
     )
   );
-}
-
-export function getYesterday() {
-  const year = getYear(new Date());
-  const month = getMonth(new Date());
-  const day = getDate(new Date());
-
-  return subDays(new Date(Date.UTC(year, month, day)), 1);
 }
 
 export function hasGhostfolioPrefix(aSymbol: string) {
@@ -503,6 +577,14 @@ export function isAccountExcluded(account?: { tags?: { id: string }[] }) {
       return id === TAG_ID_EXCLUDE_FROM_ANALYSIS;
     }) === true
   );
+}
+
+export function isCashPosition({
+  assetSubClass
+}: {
+  assetSubClass?: AssetSubClass;
+} = {}) {
+  return assetSubClass === AssetSubClass.CASH;
 }
 
 export function isCurrency(aCurrency: string) {
@@ -535,6 +617,21 @@ export function isDerivedCurrency(aCurrency: string) {
   return DERIVED_CURRENCIES.some(({ currency }) => {
     return currency === aCurrency;
   });
+}
+
+export function isDraftActivity(activity?: { tags?: { id: string }[] }) {
+  return (
+    activity?.tags?.some(({ id }) => {
+      return id === TAG_ID_DRAFT;
+    }) === true
+  );
+}
+
+export function isFearAndGreedIndexSymbol(aSymbol: string) {
+  return (
+    aSymbol === ghostfolioFearAndGreedIndexSymbolCryptocurrencies ||
+    aSymbol === ghostfolioFearAndGreedIndexSymbolStocks
+  );
 }
 
 export function isRootCurrency(aCurrency: string) {
@@ -575,8 +672,46 @@ export function isSystemTag(tag?: { id: string }) {
   });
 }
 
+export function isUserSettingOfAuthenticatedUser(aKey: string) {
+  return USER_SETTINGS_KEYS_OF_AUTHENTICATED_USER.includes(
+    aKey as keyof UserSettings
+  );
+}
+
+export function isValidCurrencyCode(aCurrency: string) {
+  if (!aCurrency) {
+    return false;
+  }
+
+  return (
+    isDerivedCurrency(aCurrency) ||
+    (aCurrency === aCurrency.toUpperCase() && isISO4217CurrencyCode(aCurrency))
+  );
+}
+
 export function isValidCustomAssetProfileSymbol(aSymbol: string) {
   return hasGhostfolioPrefix(aSymbol) || isUUID(aSymbol);
+}
+
+export function isValidDateAfter1970(aDate: Date | string) {
+  const date = isString(aDate) ? parseISO(aDate, { in: utc }) : aDate;
+
+  return isValid(date) && isAfter(date, new Date(0));
+}
+
+/**
+ * A private access is granted to a user, while a public access and an access
+ * of a client of the model context protocol are credentials on their own and
+ * have no grantee. A row which mixes both is neither, hence it is rejected.
+ */
+export function isValidGranteeOfAccess({
+  granteeUserId,
+  type
+}: {
+  granteeUserId?: string | null;
+  type: AccessType;
+}) {
+  return type === 'PRIVATE' ? !!granteeUserId : !granteeUserId;
 }
 
 export function isValidSearchQuery(aQuery: string) {
@@ -660,4 +795,25 @@ export function resolveMarketCondition(
   } else {
     return { emoji: undefined };
   }
+}
+
+export function resolveUserSettings({
+  impersonationUserSettings,
+  userSettings
+}: {
+  impersonationUserSettings?: UserSettings;
+  userSettings: UserSettings;
+}): UserSettings {
+  if (!impersonationUserSettings) {
+    return { ...userSettings };
+  }
+
+  return {
+    ...impersonationUserSettings,
+    ...Object.fromEntries(
+      USER_SETTINGS_KEYS_OF_AUTHENTICATED_USER.map((key) => {
+        return [key, userSettings?.[key]];
+      })
+    )
+  };
 }

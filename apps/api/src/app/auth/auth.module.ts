@@ -22,6 +22,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { GoogleStrategy } from './google.strategy';
 import { JwtStrategy } from './jwt.strategy';
+import { getOidcDiscoveryUrl } from './oidc.helper';
 import { OidcStrategy } from './oidc.strategy';
 
 @Module({
@@ -69,7 +70,7 @@ import { OidcStrategy } from './oidc.strategy';
         const issuer = configurationService.get('OIDC_ISSUER');
         const scope = configurationService.get('OIDC_SCOPE');
 
-        const callbackUrl =
+        const callbackURL =
           configurationService.get('OIDC_CALLBACK_URL') ||
           `${configurationService.get('ROOT_URL')}/api/auth/oidc/callback`;
 
@@ -94,8 +95,14 @@ import { OidcStrategy } from './oidc.strategy';
           // Fetch OIDC configuration from discovery endpoint
           try {
             const response = await fetchService.fetch(
-              `${issuer}/.well-known/openid-configuration`
+              getOidcDiscoveryUrl(issuer)
             );
+
+            if (!response.ok) {
+              throw new Error(
+                `OIDC discovery request failed with status ${response.status}`
+              );
+            }
 
             const config = (await response.json()) as {
               authorization_endpoint: string;
@@ -114,15 +121,26 @@ import { OidcStrategy } from './oidc.strategy';
           }
         }
 
+        const clientID = configurationService.get('OIDC_CLIENT_ID');
+        const clientSecret = configurationService.get('OIDC_CLIENT_SECRET');
+
+        if (!clientID || !clientSecret || !issuer) {
+          logger.error(
+            'OIDC configuration incomplete: issuer, clientID, or clientSecret missing'
+          );
+
+          throw new Error('OIDC configuration incomplete');
+        }
+
         const options: StrategyOptions = {
           authorizationURL,
+          callbackURL,
+          clientID,
+          clientSecret,
           issuer,
           scope,
           tokenURL,
-          userInfoURL,
-          callbackURL: callbackUrl,
-          clientID: configurationService.get('OIDC_CLIENT_ID'),
-          clientSecret: configurationService.get('OIDC_CLIENT_SECRET')
+          userInfoURL
         };
 
         return new OidcStrategy(authService, options);

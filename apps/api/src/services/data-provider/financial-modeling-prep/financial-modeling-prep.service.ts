@@ -54,9 +54,15 @@ export class FinancialModelingPrepService
   implements DataProviderInterface, OnModuleInit
 {
   private static countriesMapping = {
+    'Congo (Dem. Rep. of the)': 'CD',
+    'Congo (Rep. of)': 'CG',
+    'Czech Republic': 'CZ',
     'Korea (the Republic of)': 'KR',
+    Macau: 'MO',
     'Russian Federation': 'RU',
-    'Taiwan (Province of China)': 'TW'
+    'Taiwan (Province of China)': 'TW',
+    Turkey: 'TR',
+    'Virgin Islands (British)': 'VG'
   };
 
   private readonly logger = new Logger(FinancialModelingPrepService.name);
@@ -139,9 +145,18 @@ export class FinancialModelingPrepService
           .then((res) => res.json());
 
         if (!assetProfile) {
-          throw new AssetProfileDelistedError(
-            `No data found, ${symbol} (${this.getName()}) may be delisted`
-          );
+          const indexProfile = await this.getIndexProfile({
+            requestTimeout,
+            symbol
+          });
+
+          if (!indexProfile) {
+            throw new AssetProfileDelistedError(
+              `No data found, ${symbol} (${this.getName()}) may be delisted`
+            );
+          }
+
+          return { ...response, ...indexProfile };
         }
 
         const { assetClass, assetSubClass } =
@@ -169,17 +184,18 @@ export class FinancialModelingPrepService
             .then((res) => res.json());
 
           response.countries = etfCountryWeightings
-            .filter(({ country: countryName }) => {
-              return countryName.toLowerCase() !== 'other';
-            })
             .map(({ country: countryName, weightPercentage }) => {
               return {
                 code: getCountryCodeByName({
                   aliases: FinancialModelingPrepService.countriesMapping,
+                  dataSource: this.getName(),
                   name: countryName
                 }),
                 weight: parseFloat(`${weightPercentage}`) / 100
               };
+            })
+            .filter(({ code }) => {
+              return !!code;
             });
 
           const etfHoldings = await this.fetchService
@@ -578,28 +594,17 @@ export class FinancialModelingPrepService
           };
         });
       } else {
-        const queryParams = new URLSearchParams({
-          query,
-          apikey: this.apiKey
-        });
-
         const [nameResults, symbolResults] = await Promise.all([
-          this.fetchService
-            .fetch(
-              `${this.getUrl({ version: 'stable' })}/search-name?${queryParams.toString()}`,
-              {
-                signal: AbortSignal.timeout(requestTimeout)
-              }
-            )
-            .then((res) => res.json()),
-          this.fetchService
-            .fetch(
-              `${this.getUrl({ version: 'stable' })}/search-symbol?${queryParams.toString()}`,
-              {
-                signal: AbortSignal.timeout(requestTimeout)
-              }
-            )
-            .then((res) => res.json())
+          this.getSearchResults({
+            query,
+            requestTimeout,
+            endpoint: 'search-name'
+          }),
+          this.getSearchResults({
+            query,
+            requestTimeout,
+            endpoint: 'search-symbol'
+          })
         ]);
 
         const result = uniqBy(
@@ -611,10 +616,9 @@ export class FinancialModelingPrepService
 
         items = result
           .filter(({ exchange, symbol }) => {
-            if (
-              exchange === 'FOREX' ||
-              (includeIndices === false && symbol.startsWith('^'))
-            ) {
+            const isIndex = exchange === 'INDEX' || symbol.startsWith('^');
+
+            if (exchange === 'FOREX' || (includeIndices === false && isIndex)) {
               return false;
             }
 
@@ -659,6 +663,61 @@ export class FinancialModelingPrepService
     return name;
   }
 
+  /**
+   * Financial Modeling Prep has no profile for an index, thus the currency and
+   * the name are taken from the search endpoint.
+   */
+  private async getIndexProfile({
+    requestTimeout,
+    symbol
+  }: {
+    requestTimeout: number;
+    symbol: string;
+  }): Promise<Pick<SymbolProfile, 'currency' | 'name'>> {
+    const results = await this.getSearchResults({
+      requestTimeout,
+      endpoint: 'search-symbol',
+      query: symbol
+    });
+
+    const index = results?.find(({ exchange, symbol: symbolOfResult }) => {
+      return exchange === 'INDEX' && symbolOfResult === symbol;
+    });
+
+    if (!index) {
+      return undefined;
+    }
+
+    return {
+      currency: index.currency,
+      name: this.formatName({ name: index.name })
+    };
+  }
+
+  private async getSearchResults({
+    endpoint,
+    query,
+    requestTimeout
+  }: {
+    endpoint: 'search-name' | 'search-symbol';
+    query: string;
+    requestTimeout: number;
+  }) {
+    const queryParams = new URLSearchParams({
+      query,
+      apikey: this.apiKey
+    });
+
+    return this.fetchService
+      .fetch(
+        `${this.getUrl({ version: 'stable' })}/${endpoint}?${queryParams.toString()}`,
+        {
+          signal: AbortSignal.timeout(requestTimeout)
+        }
+      )
+      .then((res) => res.json());
+  }
+
   private getUrl({ version }: { version: number | 'stable' }) {
     const baseUrl = 'https://financialmodelingprep.com';
 
@@ -670,11 +729,11 @@ export class FinancialModelingPrepService
   }
 
   private parseAssetClass(profile: any): {
-    assetClass: AssetClass;
-    assetSubClass: AssetSubClass;
+    assetClass: AssetClass | undefined;
+    assetSubClass: AssetSubClass | undefined;
   } {
-    let assetClass: AssetClass;
-    let assetSubClass: AssetSubClass;
+    let assetClass: AssetClass | undefined;
+    let assetSubClass: AssetSubClass | undefined;
 
     if (profile) {
       if (profile.isEtf) {

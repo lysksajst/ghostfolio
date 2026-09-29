@@ -16,6 +16,8 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
   private static baseUrl = 'https://www.trackinsight.com';
 
   private static countriesMapping = {
+    'Czech Republic': 'CZ',
+    Macau: 'MO',
     'Republic of Korea': 'KR',
     'Russian Federation': 'RU',
     Turkey: 'TR',
@@ -62,10 +64,10 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
       symbol
     });
 
-    if (!trackinsightSymbol) {
+    if (!trackinsightSymbol && symbol.includes('.')) {
       trackinsightSymbol = await this.searchTrackinsightSymbol({
         requestTimeout,
-        symbol: symbol.split('.')?.[0]
+        symbol: symbol.split('.')[0]
       });
     }
 
@@ -125,13 +127,15 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
       for (const [name, value] of Object.entries<any>(
         holdings?.countries ?? {}
       )) {
-        response.countries.push({
-          code: getCountryCodeByName({
-            name,
-            aliases: TrackinsightDataEnhancerService.countriesMapping
-          }),
-          weight: value.weight
+        const code = getCountryCodeByName({
+          name,
+          aliases: TrackinsightDataEnhancerService.countriesMapping,
+          dataSource: this.getName()
         });
+
+        if (code) {
+          response.countries.push({ code, weight: value.weight });
+        }
       }
     }
 
@@ -208,6 +212,12 @@ export class TrackinsightDataEnhancerService implements DataEnhancerInterface {
         ) {
           return jsonRes['results']['docs'][0]['ticker'];
         }
+
+        this.logger.debug(
+          `Could not match a Trackinsight symbol for "${symbol}": ${JSON.stringify(
+            jsonRes
+          )}`
+        );
 
         return undefined;
       })

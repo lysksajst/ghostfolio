@@ -1,4 +1,9 @@
+import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
+import {
+  COMMENT_MAXIMUM_LENGTH,
+  TAG_ID_DRAFT
+} from '@ghostfolio/common/config';
 import { CreateAccountDto, UpdateAccountDto } from '@ghostfolio/common/dtos';
 import { getStringOrNull } from '@ghostfolio/common/helper';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
@@ -60,6 +65,8 @@ import { CreateOrUpdateAccountDialogParams } from './interfaces/interfaces';
   templateUrl: 'create-or-update-account-dialog.html'
 })
 export class GfCreateOrUpdateAccountDialogComponent {
+  protected readonly COMMENT_MAXIMUM_LENGTH = COMMENT_MAXIMUM_LENGTH;
+
   protected accountForm: FormGroup;
   protected currencies: string[] = [];
   protected filteredPlatforms: Observable<Platform[]> | undefined;
@@ -74,6 +81,9 @@ export class GfCreateOrUpdateAccountDialogComponent {
   private readonly dialogRef =
     inject<MatDialogRef<GfCreateOrUpdateAccountDialogComponent>>(MatDialogRef);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly impersonationStorageService = inject(
+    ImpersonationStorageService
+  );
   private readonly userService = inject(UserService);
 
   protected get selectedPlatform() {
@@ -86,18 +96,25 @@ export class GfCreateOrUpdateAccountDialogComponent {
     const { currencies } = this.dataService.fetchInfo();
     this.currencies = currencies;
 
-    this.hasPermissionToCreateOwnTag = hasPermission(
-      this.data.user?.permissions,
-      permissions.createOwnTag
-    );
+    // A tag created during an impersonation belongs to the authenticated user,
+    // hence it cannot be assigned to the data of the impersonated user
+    this.hasPermissionToCreateOwnTag =
+      !this.impersonationStorageService.getId() &&
+      hasPermission(this.data.user?.permissions, permissions.createOwnTag);
 
     this.tagsAvailable =
-      this.data.user?.tags?.map((tag) => {
-        return {
-          ...tag,
-          name: translate(tag.name)
-        };
-      }) ?? [];
+      this.data.user?.tags
+        ?.filter(({ id }) => {
+          // The "DRAFT" tag qualifies an individual activity and cannot be
+          // assigned to an account
+          return id !== TAG_ID_DRAFT;
+        })
+        .map((tag) => {
+          return {
+            ...tag,
+            name: translate(tag.name)
+          };
+        }) ?? [];
 
     this.accountForm = this.formBuilder.group({
       accountId: [{ disabled: true, value: this.data.account.id }],
