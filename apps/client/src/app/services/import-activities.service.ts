@@ -11,11 +11,12 @@ import {
   parseDate as parseDateHelper
 } from '@ghostfolio/common/helper';
 import { Activity } from '@ghostfolio/common/interfaces';
+import type { Account } from '@ghostfolio/prisma/browser';
+import { DataSource, Type as ActivityType } from '@ghostfolio/prisma/enums';
 
 import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
-import { Account, DataSource, Type as ActivityType } from '@prisma/client';
-import { isFinite, isNumber, isString } from 'lodash';
+import { isFinite, isNumber, isString } from 'lodash-es';
 import { parse as csvToJson } from 'papaparse';
 import { firstValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -39,6 +40,18 @@ export class ImportActivitiesService {
   ];
 
   private readonly http = inject(HttpClient);
+
+  /**
+   * Gives the number of the lines of a CSV file which are not empty, without
+   * the first line
+   */
+  public getDataRowCountOfCsv(fileContent: string) {
+    const lineCount = fileContent.split(/\r\n|\r|\n/).filter((line) => {
+      return line.trim().length > 0;
+    }).length;
+
+    return Math.max(lineCount - 1, 0);
+  }
 
   public async importCsv({
     fileContent,

@@ -6,6 +6,7 @@ import type { AdminData } from './admin-data.interface';
 import type { AdminJobs } from './admin-jobs.interface';
 import type { AdminMarketDataDetails } from './admin-market-data-details.interface';
 import type { AdminUser } from './admin-user.interface';
+import type { AiActivityRow } from './ai-activity-row.interface';
 import type { AssetClassSelectorOption } from './asset-class-selector-option.interface';
 import type { AssetProfileIdentifier } from './asset-profile-identifier.interface';
 import type { AssetProfileItem } from './asset-profile-item.interface';
@@ -45,6 +46,7 @@ import type { ActivitiesResponse } from './responses/activities-response.interfa
 import type { ActivityResponse } from './responses/activity-response.interface';
 import type { AdminUserResponse } from './responses/admin-user-response.interface';
 import type { AdminUsersResponse } from './responses/admin-users-response.interface';
+import type { AiActivitiesResponse } from './responses/ai-activities-response.interface';
 import type { AiPromptResponse } from './responses/ai-prompt-response.interface';
 import type { AiServiceHealthResponse } from './responses/ai-service-health-response.interface';
 import type { ApiKeyResponse } from './responses/api-key-response.interface';
@@ -53,6 +55,7 @@ import type { AssetProfilesResponse } from './responses/asset-profiles-response.
 import type { AssetResponse } from './responses/asset-response.interface';
 import type { BenchmarkMarketDataDetailsResponse } from './responses/benchmark-market-data-details-response.interface';
 import type { BenchmarkResponse } from './responses/benchmark-response.interface';
+import type { CreateActivityResponse } from './responses/create-activity-response.interface';
 import type { CreateStripeCheckoutSessionResponse } from './responses/create-stripe-checkout-session-response.interface';
 import type { DataEnhancerHealthResponse } from './responses/data-enhancer-health-response.interface';
 import type { DataProviderGhostfolioAssetProfileResponse } from './responses/data-provider-ghostfolio-asset-profile-response.interface';
@@ -64,13 +67,16 @@ import type {
 } from './responses/data-provider-response.interface';
 import type { DividendsResponse } from './responses/dividends-response.interface';
 import type { ResponseError } from './responses/errors.interface';
+import type { ExchangeRateResponse } from './responses/exchange-rate-response.interface';
 import type { ExportResponse } from './responses/export-response.interface';
 import type { HistoricalResponse } from './responses/historical-response.interface';
 import type { ImportResponse } from './responses/import-response.interface';
 import type { InfoResponse } from './responses/info-response.interface';
+import type { LivenessHealthResponse } from './responses/liveness-health-response.interface';
 import type { LookupResponse } from './responses/lookup-response.interface';
 import type { MarketDataOfMarketsResponse } from './responses/market-data-of-markets-response.interface';
 import type { OAuthResponse } from './responses/oauth-response.interface';
+import type { PlatformResponse } from './responses/platform-response.interface';
 import type { PlatformsResponse } from './responses/platforms-response.interface';
 import type { PortfolioDividendsResponse } from './responses/portfolio-dividends-response.interface';
 import type { PortfolioHoldingResponse } from './responses/portfolio-holding-response.interface';
@@ -80,6 +86,7 @@ import type { PortfolioPerformanceResponse } from './responses/portfolio-perform
 import type { PortfolioReportResponse } from './responses/portfolio-report.interface';
 import type { PublicPortfolioResponse } from './responses/public-portfolio-response.interface';
 import type { QuotesResponse } from './responses/quotes-response.interface';
+import type { RedeemCouponResponse } from './responses/redeem-coupon-response.interface';
 import type { WatchlistResponse } from './responses/watchlist-response.interface';
 import type { RuleSettings } from './rule-settings.interface';
 import type { ScraperConfiguration } from './scraper-configuration.interface';
@@ -116,6 +123,8 @@ export {
   AdminUser,
   AdminUserResponse,
   AdminUsersResponse,
+  AiActivitiesResponse,
+  AiActivityRow,
   AiPromptResponse,
   AiServiceHealthResponse,
   ApiKeyResponse,
@@ -132,6 +141,7 @@ export {
   BenchmarkProperty,
   BenchmarkResponse,
   Coupon,
+  CreateActivityResponse,
   CreateStripeCheckoutSessionResponse,
   DataEnhancerHealthResponse,
   DataProviderGhostfolioAssetProfileResponse,
@@ -142,6 +152,7 @@ export {
   DataProviderResponse,
   DividendsResponse,
   EnhancedAssetProfile,
+  ExchangeRateResponse,
   ExportResponse,
   Filter,
   FilterGroup,
@@ -156,12 +167,14 @@ export {
   InfoResponse,
   InvestmentItem,
   LineChartItem,
+  LivenessHealthResponse,
   LookupItem,
   LookupResponse,
   MarketData,
   MarketDataOfMarketsResponse,
   NullableLineChartItem,
   OAuthResponse,
+  PlatformResponse,
   PlatformsResponse,
   PortfolioChart,
   PortfolioDetails,
@@ -180,6 +193,7 @@ export {
   PublicKeyCredentialRequestOptionsJSON,
   PublicPortfolioResponse,
   QuotesResponse,
+  RedeemCouponResponse,
   ReferralPartner,
   ResponseError,
   RuleSettings,

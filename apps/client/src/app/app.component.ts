@@ -1,4 +1,8 @@
-import { getCssVariable } from '@ghostfolio/common/helper';
+import {
+  getBackgroundColor,
+  getCssVariable,
+  isDarkColorScheme
+} from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
   InfoItem,
@@ -21,6 +25,7 @@ import {
   OnInit
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DateAdapter } from '@angular/material/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Title } from '@angular/platform-browser';
 import {
@@ -35,7 +40,7 @@ import { Chart } from 'chart.js';
 import { addIcons } from 'ionicons';
 import { openOutline } from 'ionicons/icons';
 import { DeviceDetectorService } from 'ngx-device-detector';
-import { filter } from 'rxjs/operators';
+import { distinctUntilChanged, filter, map } from 'rxjs/operators';
 
 import { GfFooterComponent } from './components/footer/footer.component';
 import { GfHeaderComponent } from './components/header/header.component';
@@ -71,6 +76,7 @@ export class GfAppComponent implements OnInit {
 
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
   private readonly dataService = inject(DataService);
+  private readonly dateAdapter = inject<DateAdapter<Date, string>>(DateAdapter);
   private readonly destroyRef = inject(DestroyRef);
   private readonly deviceDetectorService = inject(DeviceDetectorService);
   private readonly dialog = inject(MatDialog);
@@ -209,6 +215,20 @@ export class GfAppComponent implements OnInit {
       });
 
     this.userService.stateChanged
+      .pipe(
+        map(({ user }) => {
+          return user?.settings.locale;
+        }),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((locale) => {
+        if (locale) {
+          this.dateAdapter.setLocale(locale);
+        }
+      });
+
+    this.userService.stateChanged
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((state) => {
         this.user = state.user;
@@ -227,7 +247,7 @@ export class GfAppComponent implements OnInit {
           : !!this.info?.subscriptionOffer?.coupon ||
             !!this.info?.subscriptionOffer?.durationExtension;
 
-        this.initializeTheme(this.user?.settings.colorScheme);
+        this.toggleTheme(this.user?.settings.colorScheme);
 
         this.changeDetectorRef.markForCheck();
       });
@@ -259,21 +279,19 @@ export class GfAppComponent implements OnInit {
     document.location.href = `/${document.documentElement.lang}`;
   }
 
-  private initializeTheme(userPreferredColorScheme?: ColorScheme) {
-    const isDarkTheme = userPreferredColorScheme
-      ? userPreferredColorScheme === 'DARK'
-      : window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    this.toggleTheme(isDarkTheme);
+  private initializeTheme() {
+    this.toggleTheme();
 
     // Default chart styles
     Chart.defaults.font.family = getCssVariable('--font-family-sans-serif');
 
-    window.matchMedia('(prefers-color-scheme: dark)').addListener((event) => {
-      if (!this.user?.settings.colorScheme) {
-        this.toggleTheme(event.matches);
-      }
-    });
+    window
+      .matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => {
+        if (!this.user?.settings.colorScheme) {
+          this.toggleTheme();
+        }
+      });
   }
 
   private openHoldingDetailDialog({
@@ -344,21 +362,19 @@ export class GfAppComponent implements OnInit {
       });
   }
 
-  private toggleTheme(isDarkTheme: boolean) {
-    const themeColor = getCssVariable(
-      isDarkTheme ? '--dark-background' : '--light-background'
-    );
-
-    if (isDarkTheme) {
+  private toggleTheme(userPreferredColorScheme?: ColorScheme) {
+    if (isDarkColorScheme(userPreferredColorScheme)) {
       this.document.body.classList.add('theme-dark');
       this.document.body.classList.remove('theme-light');
+      this.document.documentElement.setAttribute('data-bs-theme', 'dark');
     } else {
       this.document.body.classList.add('theme-light');
       this.document.body.classList.remove('theme-dark');
+      this.document.documentElement.setAttribute('data-bs-theme', 'light');
     }
 
     this.document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', themeColor);
+      ?.setAttribute('content', getBackgroundColor(userPreferredColorScheme));
   }
 }

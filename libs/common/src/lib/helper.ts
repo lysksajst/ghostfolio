@@ -1,14 +1,17 @@
-import { utc } from '@date-fns/utc';
-import { NumberParser } from '@internationalized/number';
-import {
-  AccessType,
-  Type as ActivityType,
+import type {
   AssetProfileOverrides,
-  AssetSubClass,
   MarketData,
   Prisma,
   SymbolProfile
-} from '@prisma/client';
+} from '@ghostfolio/prisma/browser';
+import {
+  AccessType,
+  Type as ActivityType,
+  AssetSubClass
+} from '@ghostfolio/prisma/enums';
+
+import { utc } from '@date-fns/utc';
+import { NumberParser } from '@internationalized/number';
 import { Big } from 'big.js';
 import { isISO4217CurrencyCode, isUUID } from 'class-validator';
 import { countries } from 'countries-list';
@@ -39,7 +42,7 @@ import {
   uk,
   zhCN
 } from 'date-fns/locale';
-import { get, isNil, isString } from 'lodash';
+import { get, isNil, isString } from 'lodash-es';
 
 import {
   DEFAULT_CURRENCY,
@@ -83,6 +86,7 @@ const USER_SETTINGS_KEYS_OF_AUTHENTICATED_USER: (keyof UserSettings)[] = [
   'filters.tags',
   'holdingsViewMode',
   'isExperimentalFeatures',
+  'isGhostfolioAiEnabled',
   'isRestrictedView',
   'language',
   'locale',
@@ -234,6 +238,29 @@ export function canOpenHoldingDetail({
   return assetProfile?.assetSubClass !== AssetSubClass.CASH;
 }
 
+/**
+ * Checks if the symbol of a custom asset profile can be used, either to connect
+ * to the existing asset profile or to create a new one. The prefix is reserved
+ * for the asset profiles of the admin, thus a new asset profile cannot use it.
+ */
+export function canUseCustomAssetProfileSymbol({
+  assetProfile,
+  symbol
+}: {
+  assetProfile: Pick<SymbolProfile, 'id'> | null;
+  symbol: string;
+}): boolean {
+  if (!isValidCustomAssetProfileSymbol(symbol)) {
+    return false;
+  }
+
+  if (assetProfile) {
+    return true;
+  }
+
+  return !hasGhostfolioPrefix(symbol);
+}
+
 export function capitalize(aString: string) {
   return aString.charAt(0).toUpperCase() + aString.slice(1).toLowerCase();
 }
@@ -342,12 +369,9 @@ export function getAssetProfileIdentifier({
   return `${dataSource}-${symbol}`;
 }
 
-export function getBackgroundColor(aColorScheme: ColorScheme) {
+export function getBackgroundColor(aColorScheme?: ColorScheme) {
   return getCssVariable(
-    aColorScheme === 'DARK' ||
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? '--dark-background'
-      : '--light-background'
+    isDarkColorScheme(aColorScheme) ? '--dark-background' : '--light-background'
   );
 }
 
@@ -453,6 +477,22 @@ export function getEmojiFlag(aCountryCode: string) {
   });
 }
 
+export function getHoldingName({
+  assetSubClass,
+  assetSubClassLabel,
+  name,
+  symbol
+}: Pick<
+  PortfolioPosition['assetProfile'],
+  'assetSubClass' | 'assetSubClassLabel' | 'name' | 'symbol'
+>) {
+  if (isCashPosition({ assetSubClass }) && assetSubClassLabel) {
+    return `${assetSubClassLabel} (${symbol})`;
+  }
+
+  return name ?? symbol;
+}
+
 export function getLocale() {
   return navigator.language ?? DEFAULT_LOCALE;
 }
@@ -528,10 +568,9 @@ export function getSum(aArray: Big[]) {
   return new Big(0);
 }
 
-export function getTextColor(aColorScheme: ColorScheme) {
+export function getTextColor(aColorScheme?: ColorScheme) {
   const cssVariable = getCssVariable(
-    aColorScheme === 'DARK' ||
-      window.matchMedia('(prefers-color-scheme: dark)').matches
+    isDarkColorScheme(aColorScheme)
       ? '--light-primary-text'
       : '--dark-primary-text'
   );
@@ -571,6 +610,16 @@ export function interpolate(template: string, context: any) {
   });
 }
 
+export function isAccountBalanceInFuture({
+  date,
+  startOfUtcDateOfTomorrow = getStartOfUtcDateOfTomorrow()
+}: {
+  date: Date;
+  startOfUtcDateOfTomorrow?: Date;
+}) {
+  return isAfter(date, startOfUtcDateOfTomorrow);
+}
+
 export function isAccountExcluded(account?: { tags?: { id: string }[] }) {
   return (
     account?.tags?.some(({ id }) => {
@@ -607,6 +656,14 @@ export function isCurrencySymbol(aSymbol: string) {
     ) &&
     isCurrency(aSymbol.substring(aSymbol.length - DEFAULT_CURRENCY.length))
   );
+}
+
+export function isDarkColorScheme(aColorScheme?: ColorScheme | null) {
+  if (aColorScheme) {
+    return aColorScheme === 'DARK';
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
 export function isDerivedCurrency(aCurrency: string) {
@@ -676,6 +733,12 @@ export function isUserSettingOfAuthenticatedUser(aKey: string) {
   return USER_SETTINGS_KEYS_OF_AUTHENTICATED_USER.includes(
     aKey as keyof UserSettings
   );
+}
+
+export function isValidAccountBalanceDate(aDate: string) {
+  const date = parseISO(aDate);
+
+  return isValid(date) && !isAccountBalanceInFuture({ date: resetHours(date) });
 }
 
 export function isValidCurrencyCode(aCurrency: string) {

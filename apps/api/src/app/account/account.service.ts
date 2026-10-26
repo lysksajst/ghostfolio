@@ -2,7 +2,6 @@ import { AccountBalanceService } from '@ghostfolio/api/app/account-balance/accou
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
 import {
   getWhereAccountBalanceNotInFuture,
-  isAccountBalanceInFuture,
   WHERE_ACCOUNT_NOT_EXCLUDED
 } from '@ghostfolio/api/helper/account.helper';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
@@ -10,7 +9,8 @@ import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { TagService } from '@ghostfolio/api/services/tag/tag.service';
 import {
   DATE_FORMAT,
-  getStartOfUtcDateOfTomorrow
+  getStartOfUtcDateOfTomorrow,
+  isAccountBalanceInFuture
 } from '@ghostfolio/common/helper';
 import { Filter } from '@ghostfolio/common/interfaces';
 import { AccountWithBalance } from '@ghostfolio/common/types';
@@ -28,7 +28,7 @@ import {
 } from '@prisma/client';
 import { Big } from 'big.js';
 import { format } from 'date-fns';
-import { groupBy, isNil } from 'lodash';
+import { groupBy, isNil } from 'lodash-es';
 
 import { CashDetails } from './interfaces/cash-details.interface';
 

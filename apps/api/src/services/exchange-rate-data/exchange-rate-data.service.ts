@@ -26,7 +26,7 @@ import {
   isToday,
   subDays
 } from 'date-fns';
-import { isNumber } from 'lodash';
+import { isNumber } from 'lodash-es';
 import ms from 'ms';
 
 import { ExchangeRatesByCurrency } from './interfaces/exchange-rate-data.interface';
@@ -173,12 +173,11 @@ export class ExchangeRateDataService {
       { in: utc }
     );
 
-    const historicalData = await this.dataProviderService.getHistorical(
-      this.currencyPairs,
-      'day',
-      startOfUtcDateOfYesterday,
-      startOfUtcDateOfYesterday
-    );
+    const historicalData = await this.dataProviderService.getHistorical({
+      assetProfileIdentifiers: this.currencyPairs,
+      from: startOfUtcDateOfYesterday,
+      to: startOfUtcDateOfYesterday
+    });
 
     const quotes = await this.dataProviderService.getQuotes({
       items: this.currencyPairs.map(({ dataSource, symbol }) => {

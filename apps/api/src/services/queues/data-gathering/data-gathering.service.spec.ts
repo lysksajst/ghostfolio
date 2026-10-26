@@ -186,6 +186,47 @@ describe('DataGatheringService', () => {
     });
   });
 
+  describe('gatherSymbol', () => {
+    beforeEach(() => {
+      jest
+        .spyOn(dataGatheringService as any, 'getSymbolsMax')
+        .mockResolvedValue([
+          {
+            dataSource: 'YAHOO',
+            date: parseDate('2026-08-01'),
+            symbol: 'USDEUR'
+          }
+        ]);
+    });
+
+    it('does not apply the cooldown by default', async () => {
+      await dataGatheringService.gatherSymbol({
+        dataSource: 'YAHOO',
+        symbol: 'USDEUR'
+      });
+
+      const [jobs] = dataGatheringQueue.addBulk.mock.calls[0];
+
+      expect(jobs[0].opts.removeOnComplete).toBe(true);
+    });
+
+    it('retains its completed jobs for the duration of a given cooldown', async () => {
+      await dataGatheringService.gatherSymbol({
+        dataSource: 'YAHOO',
+        removeOnComplete: {
+          age: GATHER_HISTORICAL_MARKET_DATA_COOLDOWN_IN_MS / 1000
+        },
+        symbol: 'USDEUR'
+      });
+
+      const [jobs] = dataGatheringQueue.addBulk.mock.calls[0];
+
+      expect(jobs[0].opts.removeOnComplete).toEqual({
+        age: GATHER_HISTORICAL_MARKET_DATA_COOLDOWN_IN_MS / 1000
+      });
+    });
+  });
+
   describe('gatherSymbols', () => {
     it('does not apply the cooldown to a manually triggered gathering', async () => {
       await dataGatheringService.gatherSymbols({
@@ -222,7 +263,29 @@ describe('DataGatheringService', () => {
       expect(prismaService.marketData.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           create: expect.objectContaining({ isCarriedForward: false }),
-          update: { marketPrice: 100, isCarriedForward: false }
+          update: { isCarriedForward: false, marketPrice: 100, state: 'CLOSE' }
+        })
+      );
+    });
+
+    it('sets the state to INTRADAY for today', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-22T14:00:00.000Z'));
+
+      dataProviderService.getHistoricalRaw.mockResolvedValue({
+        'YAHOO-AAPL': {
+          '2026-08-22': { marketPrice: 100 }
+        }
+      });
+
+      await dataGatheringService.gatherSymbolForDate({
+        dataSource: 'YAHOO',
+        date: parseDate('2026-08-22'),
+        symbol: 'AAPL'
+      });
+
+      expect(prismaService.marketData.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({ state: 'INTRADAY' })
         })
       );
     });

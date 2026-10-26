@@ -1,8 +1,8 @@
-import { GfInvestmentChartComponent } from '@ghostfolio/client/components/investment-chart/investment-chart.component';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
   DEFAULT_DATE_RANGE,
   DEFAULT_PAGE_SIZE,
+  NUMERICAL_PRECISION_THRESHOLD_3_FIGURES,
   NUMERICAL_PRECISION_THRESHOLD_4_FIGURES
 } from '@ghostfolio/common/config';
 import { CreateAccountBalanceDto } from '@ghostfolio/common/dtos';
@@ -10,18 +10,20 @@ import { DATE_FORMAT, downloadAsFile } from '@ghostfolio/common/helper';
 import {
   AccountBalancesResponse,
   Activity,
-  HistoricalDataItem,
+  LineChartItem,
   PortfolioPosition,
   User
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { hasScope, scopes } from '@ghostfolio/common/scopes';
+import type { Tag } from '@ghostfolio/prisma/browser';
 import { GfAccountBalancesComponent } from '@ghostfolio/ui/account-balances';
 import { GfActivitiesTableComponent } from '@ghostfolio/ui/activities-table';
 import { GfDialogFooterComponent } from '@ghostfolio/ui/dialog-footer';
 import { GfDialogHeaderComponent } from '@ghostfolio/ui/dialog-header';
 import { GfHoldingsTableComponent } from '@ghostfolio/ui/holdings-table';
 import { translate } from '@ghostfolio/ui/i18n';
+import { GfInvestmentChartComponent } from '@ghostfolio/ui/investment-chart';
 import { DataService } from '@ghostfolio/ui/services';
 import { GfTagsSelectorComponent } from '@ghostfolio/ui/tags-selector';
 import { GfValueComponent } from '@ghostfolio/ui/value';
@@ -34,7 +36,6 @@ import {
   inject,
   OnInit
 } from '@angular/core';
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
@@ -45,7 +46,6 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { NavigationStart, Router } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { Tag } from '@prisma/client';
 import { Big } from 'big.js';
 import { format, parseISO } from 'date-fns';
 import { addIcons } from 'ionicons';
@@ -55,7 +55,7 @@ import {
   readerOutline,
   swapVerticalOutline
 } from 'ionicons/icons';
-import { isNumber } from 'lodash';
+import { isNumber } from 'lodash-es';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { filter, forkJoin } from 'rxjs';
 
@@ -82,7 +82,6 @@ import {
     MatTabsModule,
     NgxSkeletonLoaderModule
   ],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'gf-account-detail-dialog',
   styleUrls: ['./account-detail-dialog.component.scss'],
   templateUrl: 'account-detail-dialog.html'
@@ -99,13 +98,17 @@ export class GfAccountDetailDialogComponent implements OnInit {
   protected equity: number | null;
   protected equityPrecision = 2;
   protected hasPermissionToDeleteAccountBalance: boolean;
-  protected historicalDataItems: HistoricalDataItem[];
+  protected historicalDataItems: LineChartItem[];
   protected holdings: PortfolioPosition[];
   protected interestInBaseCurrency: number;
   protected interestInBaseCurrencyPrecision = 2;
   protected isLoading = true;
   protected isLoadingChart: boolean;
   protected name: string | null;
+  protected netPerformancePercentageWithCurrencyEffect: number;
+  protected netPerformancePercentageWithCurrencyEffectPrecision = 2;
+  protected netPerformanceWithCurrencyEffect: number;
+  protected netPerformanceWithCurrencyEffectPrecision = 2;
   protected pageIndex = 0;
   protected pageSize = DEFAULT_PAGE_SIZE;
   protected platformName: string;
@@ -356,20 +359,53 @@ export class GfAccountDetailDialogComponent implements OnInit {
     }).subscribe({
       error: () => {
         this.isLoadingChart = false;
+
+        this.changeDetectorRef.markForCheck();
       },
       next: ({ accountBalances, portfolioPerformance }) => {
         this.accountBalances = accountBalances.balances;
+
+        const {
+          netPerformancePercentageWithCurrencyEffect,
+          netPerformanceWithCurrencyEffect
+        } = portfolioPerformance.performance;
+
+        this.netPerformancePercentageWithCurrencyEffect =
+          netPerformancePercentageWithCurrencyEffect;
+
+        if (
+          this.data.deviceType === 'mobile' &&
+          this.netPerformancePercentageWithCurrencyEffect >=
+            NUMERICAL_PRECISION_THRESHOLD_3_FIGURES
+        ) {
+          this.netPerformancePercentageWithCurrencyEffectPrecision = 0;
+        }
+
+        this.netPerformanceWithCurrencyEffect =
+          netPerformanceWithCurrencyEffect;
+
+        if (
+          this.data.deviceType === 'mobile' &&
+          this.netPerformanceWithCurrencyEffect >=
+            NUMERICAL_PRECISION_THRESHOLD_4_FIGURES
+        ) {
+          this.netPerformanceWithCurrencyEffectPrecision = 0;
+        }
 
         if (
           portfolioPerformance.chart &&
           portfolioPerformance.chart.length > 0
         ) {
-          this.historicalDataItems = portfolioPerformance.chart.map(
-            ({ date, netWorth, netWorthInPercentage }) => ({
-              date,
-              value: isNumber(netWorth) ? netWorth : netWorthInPercentage
+          this.historicalDataItems = portfolioPerformance.chart
+            .map(({ date, netWorth, netWorthInPercentage }) => {
+              return {
+                date,
+                value: isNumber(netWorth) ? netWorth : netWorthInPercentage
+              };
             })
-          );
+            .filter((item): item is LineChartItem => {
+              return isNumber(item.value);
+            });
         } else {
           this.historicalDataItems = this.accountBalances.map(
             ({ date, valueInBaseCurrency }) => {

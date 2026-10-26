@@ -1,8 +1,5 @@
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
-import {
-  isAccountBalanceInFuture,
-  WHERE_ACCOUNT_NOT_EXCLUDED
-} from '@ghostfolio/api/helper/account.helper';
+import { WHERE_ACCOUNT_NOT_EXCLUDED } from '@ghostfolio/api/helper/account.helper';
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
@@ -11,6 +8,7 @@ import {
   DATE_FORMAT,
   getStartOfUtcDateOfTomorrow,
   getSum,
+  isAccountBalanceInFuture,
   resetHours
 } from '@ghostfolio/common/helper';
 import {
@@ -24,7 +22,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AccountBalance, Prisma } from '@prisma/client';
 import { Big } from 'big.js';
 import { endOfToday, format, min, parseISO } from 'date-fns';
-import { groupBy } from 'lodash';
+import { groupBy } from 'lodash-es';
 
 @Injectable()
 export class AccountBalanceService {
@@ -53,26 +51,23 @@ export class AccountBalanceService {
   }: CreateAccountBalanceDto & {
     userId: string;
   }): Promise<AccountBalance> {
+    const dateOfBalance = resetHours(parseISO(date));
+
     const accountBalance = await this.prismaService.accountBalance.upsert({
       create: {
-        account: {
-          connect: {
-            id_userId: {
-              userId,
-              id: accountId
-            }
-          }
-        },
-        date: resetHours(parseISO(date)),
+        accountId,
+        userId,
+        date: dateOfBalance,
         value: balance
       },
       update: {
         value: balance
       },
       where: {
-        accountId_date: {
+        accountId_userId_date: {
           accountId,
-          date: resetHours(parseISO(date))
+          userId,
+          date: dateOfBalance
         }
       }
     });

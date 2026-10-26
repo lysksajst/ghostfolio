@@ -6,16 +6,15 @@ import {
   DEFAULT_LOCALE
 } from '@ghostfolio/common/config';
 import { CreateOrderDto, UpdateOrderDto } from '@ghostfolio/common/dtos';
-import {
-  getDateFormatString,
-  getStringOrNull
-} from '@ghostfolio/common/helper';
+import { getStringOrNull } from '@ghostfolio/common/helper';
 import {
   AssetClassSelectorOption,
   LookupItem
 } from '@ghostfolio/common/interfaces';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { validateObjectForForm } from '@ghostfolio/common/utils';
+import type { Tag } from '@ghostfolio/prisma/browser';
+import { AssetClass, Type } from '@ghostfolio/prisma/enums';
 import { GfAccountSelectorComponent } from '@ghostfolio/ui/account-selector';
 import { translate } from '@ghostfolio/ui/i18n';
 import { DataService } from '@ghostfolio/ui/services';
@@ -39,7 +38,6 @@ import {
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { DateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import {
   MAT_DIALOG_DATA,
@@ -50,7 +48,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { IonIcon } from '@ionic/angular/standalone';
-import { AssetClass, Tag, Type } from '@prisma/client';
 import { isAfter, isToday } from 'date-fns';
 import { addIcons } from 'ionicons';
 import { calendarClearOutline, refreshOutline } from 'ionicons/icons';
@@ -101,7 +98,6 @@ export class GfCreateOrUpdateActivityDialogComponent {
   protected currencies: string[] = [];
   protected currencyOfAssetProfile: string | undefined;
   protected currentMarketPrice: number | null = null;
-  protected defaultDateFormat: string;
   protected defaultLookupItems: LookupItem[] = [];
   protected hasPermissionToCreateOwnTag: boolean;
   protected isLoading = false;
@@ -118,7 +114,6 @@ export class GfCreateOrUpdateActivityDialogComponent {
 
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
   private readonly dataService = inject(DataService);
-  private readonly dateAdapter = inject<DateAdapter<Date, string>>(DateAdapter);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialogRef =
     inject<MatDialogRef<GfCreateOrUpdateActivityDialogComponent>>(MatDialogRef);
@@ -126,7 +121,6 @@ export class GfCreateOrUpdateActivityDialogComponent {
   private readonly impersonationStorageService = inject(
     ImpersonationStorageService
   );
-  private locale = inject<string>(MAT_DATE_LOCALE);
   private readonly userService = inject(UserService);
 
   public constructor() {
@@ -142,15 +136,11 @@ export class GfCreateOrUpdateActivityDialogComponent {
       !this.impersonationStorageService.getId() &&
       hasPermission(this.data.user?.permissions, permissions.createOwnTag);
 
-    this.locale = this.data.user.settings.locale ?? DEFAULT_LOCALE;
     this.mode = this.data.activity?.id ? 'update' : 'create';
-
-    this.dateAdapter.setLocale(this.locale);
 
     const { currencies } = this.dataService.fetchInfo();
 
     this.currencies = currencies;
-    this.defaultDateFormat = getDateFormatString(this.locale);
 
     this.dataService
       .fetchPortfolioHoldings({
@@ -487,10 +477,18 @@ export class GfCreateOrUpdateActivityDialogComponent {
   }
 
   protected async onSubmit() {
+    const isAssetClassApplicable =
+      this.activityForm.get('type')?.value === 'VALUABLE' ||
+      this.mode === 'update';
+
     const activity: CreateOrderDto | UpdateOrderDto = {
       accountId: this.activityForm.get('accountId')?.value,
-      assetClass: this.activityForm.get('assetClass')?.value,
-      assetSubClass: this.activityForm.get('assetSubClass')?.value,
+      assetClass: isAssetClassApplicable
+        ? this.activityForm.get('assetClass')?.value
+        : undefined,
+      assetSubClass: isAssetClassApplicable
+        ? this.activityForm.get('assetSubClass')?.value
+        : undefined,
       comment: getStringOrNull(this.activityForm.get('comment')?.value),
       currency: this.activityForm.get('currency')?.value,
       customCurrency: this.activityForm.get('currencyOfUnitPrice')?.value,

@@ -1,5 +1,5 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { DEFAULT_LOCALE, MCP_ENDPOINT } from '@ghostfolio/common/config';
+import { MCP_ENDPOINT } from '@ghostfolio/common/config';
 import { CreateAccessDto, UpdateAccessDto } from '@ghostfolio/common/dtos';
 import { canApplyFiltersToAccess } from '@ghostfolio/common/helper';
 import { Filter, PortfolioPosition } from '@ghostfolio/common/interfaces';
@@ -7,6 +7,7 @@ import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import {
   Scope,
   canGrantRestrictedWriteAccess,
+  canGrantUnrestrictedReadAccess,
   getAccessLevel,
   getScopesOfAccess,
   getScopesOfAccessLevel,
@@ -15,6 +16,7 @@ import {
 } from '@ghostfolio/common/scopes';
 import { AccessLevel, AccountWithPlatform } from '@ghostfolio/common/types';
 import { validateObjectForForm } from '@ghostfolio/common/utils';
+import { AccessType } from '@ghostfolio/prisma/enums';
 import { GfAccessLevelIconComponent } from '@ghostfolio/ui/access-level-icon';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import {
@@ -46,7 +48,6 @@ import {
   Validators
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { DateAdapter } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import {
   MAT_DIALOG_DATA,
@@ -57,7 +58,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { IonIcon } from '@ionic/angular/standalone';
-import { AccessType } from '@prisma/client';
 import { addDays, endOfDay, isValid, startOfDay } from 'date-fns';
 import { StatusCodes } from 'http-status-codes';
 import { addIcons } from 'ionicons';
@@ -107,7 +107,6 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
   private readonly data =
     inject<CreateOrUpdateAccessDialogParams>(MAT_DIALOG_DATA);
 
-  private readonly dateAdapter = inject<DateAdapter<Date, string>>(DateAdapter);
   private readonly dataService = inject(DataService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -137,6 +136,10 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
 
   public get canGrantRestrictedWriteAccess() {
     return canGrantRestrictedWriteAccess({ type: this.accessType });
+  }
+
+  public get canGrantUnrestrictedReadAccess() {
+    return canGrantUnrestrictedReadAccess({ type: this.accessType });
   }
 
   public get canGrantWriteAccess() {
@@ -184,8 +187,6 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
         this.hasExperimentalFeatures = settings.isExperimentalFeatures ?? false;
         this.tags = getTagFilters(tags);
 
-        this.dateAdapter.setLocale(settings.locale ?? DEFAULT_LOCALE);
-
         this.changeDetectorRef.markForCheck();
       });
 
@@ -202,13 +203,16 @@ export class GfCreateOrUpdateAccessDialogComponent implements OnInit {
           granteeUserIdControl?.setValue(null);
         }
 
-        // Narrow the permission to the scopes which the type permits, because
-        // an access which is not granted to a user never exposes the monetary
-        // values and a public access never changes data
+        // Narrow the permission to the scopes which the type permits and drop
+        // the monetary values, which have to be granted after the type
         this.accessForm.get('accessLevel')?.setValue(
           getAccessLevel(
             getScopesOfAccess({
-              scopes: getScopesOfAccessLevel(this.accessLevel),
+              scopes: getScopesOfAccessLevel(this.accessLevel).filter(
+                (scope) => {
+                  return scope !== scopes.portfolioReadValues;
+                }
+              ),
               type: accessType
             })
           )

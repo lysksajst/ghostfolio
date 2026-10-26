@@ -1,24 +1,20 @@
 import {
-  activityDummyData,
-  assetProfileDummyData,
-  loadExportFile,
+  loadActivitiesFromExportFile,
   userDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
 import { CurrentRateService } from '@ghostfolio/api/app/portfolio/current-rate.service';
 import { CurrentRateServiceMock } from '@ghostfolio/api/app/portfolio/current-rate.service.mock';
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
-import { RedisCacheServiceMock } from '@ghostfolio/api/app/redis-cache/redis-cache.service.mock';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { PortfolioSnapshotService } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service';
 import { PortfolioSnapshotServiceMock } from '@ghostfolio/api/services/queues/portfolio-snapshot/portfolio-snapshot.service.mock';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
+import { RedisCacheServiceMock } from '@ghostfolio/api/services/redis-cache/redis-cache.service.mock';
 import { parseDate } from '@ghostfolio/common/helper';
-import { Activity, ExportResponse } from '@ghostfolio/common/interfaces';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 
 import { Big } from 'big.js';
-import { join } from 'node:path';
 
 jest.mock('@ghostfolio/api/app/portfolio/current-rate.service', () => {
   return {
@@ -39,7 +35,7 @@ jest.mock(
   }
 );
 
-jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
+jest.mock('@ghostfolio/api/services/redis-cache/redis-cache.service', () => {
   return {
     RedisCacheService: jest.fn().mockImplementation(() => {
       return RedisCacheServiceMock;
@@ -48,23 +44,12 @@ jest.mock('@ghostfolio/api/app/redis-cache/redis-cache.service', () => {
 });
 
 describe('PortfolioCalculator', () => {
-  let exportResponse: ExportResponse;
-
   let configurationService: ConfigurationService;
   let currentRateService: CurrentRateService;
   let exchangeRateDataService: ExchangeRateDataService;
   let portfolioCalculatorFactory: PortfolioCalculatorFactory;
   let portfolioSnapshotService: PortfolioSnapshotService;
   let redisCacheService: RedisCacheService;
-
-  beforeAll(() => {
-    exportResponse = loadExportFile(
-      join(
-        __dirname,
-        '../../../../../../../test/import/ok/novn-buy-and-sell-partially.json'
-      )
-    );
-  });
 
   beforeEach(() => {
     PortfolioSnapshotServiceMock.reset();
@@ -98,28 +83,14 @@ describe('PortfolioCalculator', () => {
     it.only('with NOVN.SW buy and sell partially', async () => {
       jest.useFakeTimers().setSystemTime(parseDate('2022-04-11').getTime());
 
-      const activities: Activity[] = exportResponse.activities.map(
-        (activity) => ({
-          ...activityDummyData,
-          ...activity,
-          assetProfile: {
-            ...assetProfileDummyData,
-            currency: activity.currency,
-            dataSource: activity.dataSource,
-            name: 'Novartis AG',
-            symbol: activity.symbol
-          },
-          date: parseDate(activity.date),
-          feeInAssetProfileCurrency: activity.fee,
-          feeInBaseCurrency: activity.fee,
-          unitPriceInAssetProfileCurrency: activity.unitPrice
-        })
+      const { activities, userCurrency } = loadActivitiesFromExportFile(
+        'novn-buy-and-sell-partially.json'
       );
 
       const portfolioCalculator = portfolioCalculatorFactory.createCalculator({
         activities,
         calculationType: PerformanceCalculationType.ROAI,
-        currency: exportResponse.user.settings.currency,
+        currency: userCurrency,
         userId: userDummyData.id
       });
 

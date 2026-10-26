@@ -1,7 +1,7 @@
 import { SubscriptionType } from '@ghostfolio/common/enums';
 import { AccountWithPlatform } from '@ghostfolio/common/types';
-
-import { Access, Tag, Type as ActivityType } from '@prisma/client';
+import type { Access, Tag } from '@ghostfolio/prisma/browser';
+import { Type as ActivityType } from '@ghostfolio/prisma/enums';
 
 import { ReferralPartner } from './referral-partner.interface';
 import { SubscriptionOffer } from './subscription-offer.interface';
@@ -27,6 +27,7 @@ export interface User {
   subscription: {
     expiresAt?: Date;
     offer: SubscriptionOffer;
+    subscribedAt?: Date;
     type: SubscriptionType;
   };
   tags: (Tag & { isUsed: boolean })[];

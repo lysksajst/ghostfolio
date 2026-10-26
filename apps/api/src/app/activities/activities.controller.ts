@@ -2,19 +2,22 @@ import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorat
 import { Impersonation } from '@ghostfolio/api/decorators/impersonation.decorator';
 import { RequiresScope } from '@ghostfolio/api/decorators/requires-scope.decorator';
 import { isActivityInFuture } from '@ghostfolio/api/helper/activity.helper';
+import { isDataGatheringSupported } from '@ghostfolio/api/helper/data-source.helper';
 import { RedactValuesInResponseInterceptor } from '@ghostfolio/api/interceptors/redact-values-in-response/redact-values-in-response.interceptor';
 import { TransformDataSourceInRequestInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-request/transform-data-source-in-request.interceptor';
 import { TransformDataSourceInResponseInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-response/transform-data-source-in-response.interceptor';
 import { ApiService } from '@ghostfolio/api/services/api/api.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { DataGatheringService } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.service';
+import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
 import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
 import { DATA_GATHERING_QUEUE_PRIORITY_HIGH } from '@ghostfolio/common/config';
 import { CreateOrderDto, UpdateOrderDto } from '@ghostfolio/common/dtos';
 import { SubscriptionType } from '@ghostfolio/common/enums';
 import {
   ActivitiesResponse,
-  ActivityResponse
+  ActivityResponse,
+  CreateActivityResponse
 } from '@ghostfolio/common/interfaces';
 import { permissions } from '@ghostfolio/common/permissions';
 import { scopes } from '@ghostfolio/common/scopes';
@@ -35,6 +38,7 @@ import {
 import { Order } from '@prisma/client';
 import { parseISO } from 'date-fns';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
+import { omit } from 'lodash-es';
 
 import { ActivitiesFilterDto } from './activities-filter.dto';
 import { ActivitiesService } from './activities.service';
@@ -46,7 +50,8 @@ export class ActivitiesController {
     private readonly activitiesService: ActivitiesService,
     private readonly apiService: ApiService,
     private readonly dataProviderService: DataProviderService,
-    private readonly dataGatheringService: DataGatheringService
+    private readonly dataGatheringService: DataGatheringService,
+    private readonly symbolProfileService: SymbolProfileService
   ) {}
 
   @Delete()
@@ -208,6 +213,7 @@ export class ActivitiesController {
   @RequiresScope(scopes.activityCreate)
   @UseInterceptors(RedactValuesInResponseInterceptor)
   @UseInterceptors(TransformDataSourceInRequestInterceptor)
+  @UseInterceptors(TransformDataSourceInResponseInterceptor)
   public async createActivity(
     @Body() data: CreateOrderDto,
     @Impersonation()
@@ -216,7 +222,7 @@ export class ActivitiesController {
       userId,
       userSubscription
     }: ImpersonationContext
-  ): Promise<Order> {
+  ): Promise<CreateActivityResponse> {
     // Evaluate the more restrictive subscription of the authenticated user
     // and the owner of the activity
     const subscription =
@@ -227,6 +233,7 @@ export class ActivitiesController {
     try {
       await this.dataProviderService.validateActivities({
         subscription,
+        userId,
         activitiesDto: [
           {
             currency: data.currency,
@@ -284,22 +291,32 @@ export class ActivitiesController {
       user: { connect: { id: userId } }
     });
 
-    if (dataSource && !isActivityInFuture({ date: activity.date })) {
-      // Gather symbol data in the background, if data source is set
-      // (not MANUAL) and the date is not in the future
+    if (
+      isDataGatheringSupported(activity.SymbolProfile) &&
+      !isActivityInFuture({ date: activity.date })
+    ) {
+      // Gather symbol data in the background, if the asset profile supports
+      // data gathering and the date is not in the future
       this.dataGatheringService.gatherSymbols({
         dataGatheringItems: [
           {
-            dataSource,
+            dataSource: activity.SymbolProfile.dataSource,
             date: activity.date,
-            symbol: data.symbol
+            symbol: activity.SymbolProfile.symbol
           }
         ],
         priority: DATA_GATHERING_QUEUE_PRIORITY_HIGH
       });
     }
 
-    return activity;
+    const [assetProfile] = await this.symbolProfileService.getSymbolProfiles([
+      {
+        dataSource: activity.SymbolProfile.dataSource,
+        symbol: activity.SymbolProfile.symbol
+      }
+    ]);
+
+    return { ...omit(activity, ['SymbolProfile']), assetProfile };
   }
 
   @HasPermission(permissions.updateActivity)

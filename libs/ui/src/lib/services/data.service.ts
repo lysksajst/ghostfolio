@@ -3,6 +3,7 @@ import {
   CreateAccountBalanceDto,
   CreateAccountDto,
   CreateOrderDto,
+  CreatePlatformDto,
   CreateTagDto,
   CreateUserDto,
   CreateWatchlistItemDto,
@@ -13,6 +14,7 @@ import {
   UpdateBulkMarketDataDto,
   UpdateOrderDto,
   UpdateOwnAccessTokenDto,
+  UpdatePlatformDto,
   UpdatePropertyDto,
   UpdateTagDto,
   UpdateUserSettingDto
@@ -26,6 +28,7 @@ import {
   AccountsResponse,
   ActivitiesResponse,
   ActivityResponse,
+  AiActivitiesResponse,
   AiPromptResponse,
   ApiKeyResponse,
   AssetProfileIdentifier,
@@ -34,9 +37,9 @@ import {
   AssetResponse,
   BenchmarkMarketDataDetailsResponse,
   BenchmarkResponse,
+  CreateActivityResponse,
   CreateStripeCheckoutSessionResponse,
   DataProviderHealthResponse,
-  DataProviderHistoricalResponse,
   ExportResponse,
   Filter,
   ImportResponse,
@@ -44,6 +47,7 @@ import {
   LookupResponse,
   MarketDataOfMarketsResponse,
   OAuthResponse,
+  PlatformResponse,
   PlatformsResponse,
   PortfolioDetails,
   PortfolioDividendsResponse,
@@ -53,6 +57,7 @@ import {
   PortfolioPerformanceResponse,
   PortfolioReportResponse,
   PublicPortfolioResponse,
+  RedeemCouponResponse,
   SymbolItem,
   User,
   UserItem,
@@ -62,26 +67,27 @@ import { filterGlobalPermissions } from '@ghostfolio/common/permissions';
 import type {
   AiPromptMode,
   DateRange,
-  GroupBy
+  GroupBy,
+  TagWithAccountAndActivityCount
 } from '@ghostfolio/common/types';
+import type {
+  Account,
+  AccountBalance,
+  MarketData,
+  Order,
+  SymbolProfile,
+  Tag,
+  User as UserModel
+} from '@ghostfolio/prisma/browser';
+import { DataSource } from '@ghostfolio/prisma/enums';
 import { translate } from '@ghostfolio/ui/i18n';
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { SortDirection } from '@angular/material/sort';
 import { utc } from '@date-fns/utc';
-import {
-  Account,
-  AccountBalance,
-  DataSource,
-  MarketData,
-  Order,
-  SymbolProfile,
-  Tag,
-  User as UserModel
-} from '@prisma/client';
 import { format, parseISO } from 'date-fns';
-import { cloneDeep, groupBy, isNumber } from 'lodash';
+import { cloneDeep, groupBy, isNumber } from 'lodash-es';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -303,18 +309,6 @@ export class DataService {
     );
   }
 
-  public fetchExchangeRateForDate({
-    date,
-    symbol
-  }: {
-    date: Date;
-    symbol: string;
-  }) {
-    return this.http.get<DataProviderHistoricalResponse>(
-      `/api/v1/exchange-rate/${encodeURIComponent(symbol)}/${format(date, DATE_FORMAT, { in: utc })}`
-    );
-  }
-
   public deleteAccess(aId: string) {
     return this.http.delete<void>(`/api/v1/access/${aId}`);
   }
@@ -361,6 +355,10 @@ export class DataService {
 
   public deleteOwnUser(aData: DeleteOwnUserDto) {
     return this.http.delete<UserModel>(`/api/v1/user`, { body: aData });
+  }
+
+  public deletePlatform(aId: string) {
+    return this.http.delete<void>(`/api/v1/platforms/${aId}`);
   }
 
   public deleteTag(aId: string) {
@@ -726,14 +724,21 @@ export class DataService {
 
   public fetchPortfolioPerformance({
     filters,
+    groupBy,
     range,
     withExcludedAccounts = false
   }: {
     filters?: Filter[];
+    groupBy?: Extract<GroupBy, 'year'>;
     range: DateRange;
     withExcludedAccounts?: boolean;
   }): Observable<PortfolioPerformanceResponse> {
     let params = this.buildFiltersAsQueryParams({ filters });
+
+    if (groupBy) {
+      params = params.append('groupBy', groupBy);
+    }
+
     params = params.append('range', range);
 
     if (withExcludedAccounts) {
@@ -843,7 +848,7 @@ export class DataService {
   }
 
   public fetchTags() {
-    return this.http.get<Tag[]>('/api/v1/tags');
+    return this.http.get<TagWithAccountAndActivityCount[]>('/api/v1/tags');
   }
 
   public fetchWatchlist() {
@@ -872,7 +877,18 @@ export class DataService {
   }
 
   public postActivity(aOrder: CreateOrderDto) {
-    return this.http.post<Order>('/api/v1/activities', aOrder);
+    return this.http.post<CreateActivityResponse>('/api/v1/activities', aOrder);
+  }
+
+  public postAiActivities(file: File) {
+    const formData = new FormData();
+
+    formData.append('file', file);
+
+    return this.http.post<AiActivitiesResponse>(
+      '/api/v1/ai/activities',
+      formData
+    );
   }
 
   public postApiKey() {
@@ -891,6 +907,10 @@ export class DataService {
     const url = `/api/v1/market-data/${dataSource}/${encodeURIComponent(symbol)}`;
 
     return this.http.post<MarketData>(url, marketData);
+  }
+
+  public postPlatform(aPlatform: CreatePlatformDto) {
+    return this.http.post<PlatformResponse>(`/api/v1/platforms`, aPlatform);
   }
 
   public postTag(aTag: CreateTagDto) {
@@ -932,6 +952,13 @@ export class DataService {
     );
   }
 
+  public putPlatform(aPlatform: UpdatePlatformDto) {
+    return this.http.put<PlatformResponse>(
+      `/api/v1/platforms/${aPlatform.id}`,
+      aPlatform
+    );
+  }
+
   public putTag(aTag: UpdateTagDto) {
     return this.http.put<Tag>(`/api/v1/tags/${aTag.id}`, aTag);
   }
@@ -941,9 +968,12 @@ export class DataService {
   }
 
   public redeemCoupon(couponCode: string) {
-    return this.http.post('/api/v1/subscription/redeem-coupon', {
-      couponCode
-    });
+    return this.http.post<RedeemCouponResponse>(
+      '/api/v1/subscription/redeem-coupon',
+      {
+        couponCode
+      }
+    );
   }
 
   public transferAccountBalance({

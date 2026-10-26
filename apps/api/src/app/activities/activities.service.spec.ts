@@ -3,16 +3,36 @@ import {
   activityDummyData,
   assetProfileDummyData
 } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
+import { WHERE_ACTIVITY_NOT_DRAFT } from '@ghostfolio/api/helper/activity.helper';
 import { AssetProfileSplitService } from '@ghostfolio/api/services/asset-profile-split/asset-profile-split.service';
+import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
+import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
+import { DataGatheringService } from '@ghostfolio/api/services/queues/data-gathering/data-gathering.service';
+import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
+import { TagService } from '@ghostfolio/api/services/tag/tag.service';
+import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
 import {
+  GATHER_ASSET_PROFILE_COOLDOWN_IN_MS,
+  GATHER_ASSET_PROFILE_PROCESS_JOB_NAME,
   INVESTMENT_ACTIVITY_TYPES,
   NON_INVESTMENT_ACTIVITY_TYPES
 } from '@ghostfolio/common/config';
 import { parseDate } from '@ghostfolio/common/helper';
 import { Activity, Filter } from '@ghostfolio/common/interfaces';
+import { DateRange } from '@ghostfolio/common/types';
 
-import { AssetProfileSplit, DataSource } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  AssetClass,
+  AssetProfileSplit,
+  AssetSubClass,
+  DataSource,
+  Prisma,
+  Type as ActivityType
+} from '@prisma/client';
 import { Big } from 'big.js';
+import { isUUID } from 'class-validator';
+import { endOfDay } from 'date-fns';
 
 import { ActivitiesService } from './activities.service';
 
@@ -39,6 +59,302 @@ describe('ActivitiesService', () => {
       null,
       null
     );
+  });
+
+  describe('createActivity', () => {
+    it('creates a custom asset profile with a UUID if no asset profile exists for a symbol with the prefix', async () => {
+      const assetProfile = await getCreatedAssetProfile({ symbol: 'GF_COPX' });
+
+      expect(isUUID(assetProfile.symbol)).toBe(true);
+      expect(assetProfile.name).toBe('GF_COPX');
+    });
+
+    it('connects to the existing asset profile of a symbol with the prefix', async () => {
+      const assetProfile = await getCreatedAssetProfile({
+        existingAssetProfile: { id: 'asset-profile-id' },
+        symbol: 'GF_COPX'
+      });
+
+      expect(assetProfile.symbol).toBe('GF_COPX');
+    });
+
+    it('creates a custom asset profile with the requested UUID if no asset profile exists', async () => {
+      const symbol = '1ad7d4a2-6b2d-4e0f-9b1f-2c0f8d3e5a7b';
+
+      const assetProfile = await getCreatedAssetProfile({ symbol });
+
+      expect(assetProfile.symbol).toBe(symbol);
+    });
+
+    it('retains the completed asset profile job for the duration of the cooldown', async () => {
+      const addJobToQueue = jest.fn();
+
+      const service = new ActivitiesService(
+        null,
+        null,
+        null,
+        null,
+        { addJobToQueue } as unknown as DataGatheringService,
+        null,
+        { emit: jest.fn() } as unknown as EventEmitter2,
+        null,
+        null,
+        {
+          order: {
+            create: jest.fn().mockResolvedValue({
+              SymbolProfile: {
+                currency: 'USD',
+                dataSource: DataSource.YAHOO,
+                symbol: 'VT'
+              },
+              userId: 'user-id'
+            })
+          }
+        } as unknown as PrismaService,
+        null,
+        { validateTagIds: jest.fn() } as unknown as TagService
+      );
+
+      await service.createActivity({
+        currency: 'USD',
+        date: parseDate('2026-10-01'),
+        fee: 0,
+        quantity: 1,
+        SymbolProfile: {
+          connectOrCreate: {
+            create: {
+              currency: 'USD',
+              dataSource: DataSource.YAHOO,
+              symbol: 'VT'
+            },
+            where: {
+              dataSource_symbol: {
+                dataSource: DataSource.YAHOO,
+                symbol: 'VT'
+              }
+            }
+          }
+        },
+        type: 'BUY',
+        unitPrice: 100,
+        user: { connect: { id: 'user-id' } },
+        userId: 'user-id'
+      });
+
+      expect(addJobToQueue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: GATHER_ASSET_PROFILE_PROCESS_JOB_NAME,
+          opts: expect.objectContaining({
+            removeOnComplete: {
+              age: GATHER_ASSET_PROFILE_COOLDOWN_IN_MS / 1000
+            }
+          })
+        })
+      );
+    });
+
+    async function getCreatedAssetProfile({
+      existingAssetProfile,
+      symbol
+    }: {
+      existingAssetProfile?: { id: string };
+      symbol: string;
+    }) {
+      const create = jest.fn(({ data }: Prisma.OrderCreateArgs) => {
+        return {
+          ...data,
+          SymbolProfile: data.SymbolProfile.connectOrCreate.create
+        };
+      });
+
+      const service = new ActivitiesService(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        { emit: jest.fn() } as unknown as EventEmitter2,
+        null,
+        null,
+        {
+          order: { create },
+          symbolProfile: {
+            findUnique: jest
+              .fn()
+              .mockResolvedValue(existingAssetProfile ?? null)
+          }
+        } as unknown as PrismaService,
+        null,
+        { validateTagIds: jest.fn() } as unknown as TagService
+      );
+
+      await service.createActivity({
+        currency: 'USD',
+        date: parseDate('2024-01-01'),
+        fee: 0,
+        quantity: 1,
+        SymbolProfile: {
+          connectOrCreate: {
+            create: { symbol, currency: 'USD', dataSource: DataSource.MANUAL },
+            where: {
+              dataSource_symbol: { symbol, dataSource: DataSource.MANUAL }
+            }
+          }
+        },
+        type: 'BUY',
+        unitPrice: 100,
+        user: { connect: { id: 'user-id' } },
+        userId: 'user-id'
+      });
+
+      const { create: assetProfile, where } =
+        create.mock.calls[0][0].data.SymbolProfile.connectOrCreate;
+
+      expect(where.dataSource_symbol).toEqual({
+        dataSource: DataSource.MANUAL,
+        symbol: assetProfile.symbol
+      });
+
+      return assetProfile;
+    }
+  });
+
+  describe('getActivities', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('returns the activities with the asset profile but without the relation to the symbol profile', async () => {
+      const assetProfile = {
+        ...assetProfileDummyData,
+        currency: 'USD',
+        dataSource: DataSource.YAHOO,
+        name: 'Apple Inc.',
+        symbol: 'AAPL'
+      };
+
+      const findMany = jest.fn().mockResolvedValue([
+        {
+          ...activityDummyData,
+          account: null,
+          currency: 'USD',
+          date: parseDate('2021-01-01'),
+          fee: 1,
+          id: 'activity-id',
+          quantity: 10,
+          SymbolProfile: {
+            currency: 'USD',
+            dataSource: DataSource.YAHOO,
+            symbol: 'AAPL'
+          },
+          tags: [],
+          type: 'BUY',
+          unitPrice: 100
+        }
+      ]);
+
+      const service = new ActivitiesService(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          toCurrencyAtDate: jest.fn().mockResolvedValue(0)
+        } as unknown as ExchangeRateDataService,
+        null,
+        {
+          order: {
+            findMany,
+            count: jest.fn().mockResolvedValue(1)
+          }
+        } as unknown as PrismaService,
+        {
+          getSymbolProfiles: jest
+            .fn()
+            .mockResolvedValue([
+              { ...assetProfile, dataSource: DataSource.MANUAL },
+              assetProfile
+            ])
+        } as unknown as SymbolProfileService,
+        null
+      );
+
+      const { activities } = await service.getActivities({
+        userCurrency: 'USD',
+        userId: 'user-id'
+      });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: expect.objectContaining({
+            SymbolProfile: {
+              select: { currency: true, dataSource: true, symbol: true }
+            }
+          })
+        })
+      );
+      expect(activities).toHaveLength(1);
+      expect(activities[0]).not.toHaveProperty('SymbolProfile');
+      expect(activities[0].assetProfile).toBe(assetProfile);
+    });
+
+    it('excludes the activities of the start date of a date range', async () => {
+      jest.useFakeTimers().setSystemTime(parseDate('2024-06-15').getTime());
+
+      expect(await getDateConditions('ytd')).toEqual(
+        expect.arrayContaining([
+          { date: { gt: endOfDay(parseDate('2023-12-31')) } },
+          { date: { lte: endOfDay(parseDate('2024-06-15')) } }
+        ])
+      );
+    });
+
+    it('keeps the start date of the date range max', async () => {
+      expect(await getDateConditions('max')).toEqual(
+        expect.arrayContaining([{ date: { gt: new Date(0) } }])
+      );
+    });
+
+    async function getDateConditions(dateRange: DateRange) {
+      const findMany = jest.fn().mockResolvedValue([]);
+
+      const service = new ActivitiesService(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          order: {
+            findMany,
+            count: jest.fn().mockResolvedValue(0)
+          }
+        } as unknown as PrismaService,
+        {
+          getSymbolProfiles: jest.fn().mockResolvedValue([])
+        } as unknown as SymbolProfileService,
+        null
+      );
+
+      const { endDate, startDate } = getIntervalFromDateRange({ dateRange });
+
+      await service.getActivities({
+        endDate,
+        startDate,
+        userCurrency: 'USD',
+        userId: 'user-id'
+      });
+
+      return findMany.mock.calls[0][0].where.AND;
+    }
   });
 
   describe('getActivitiesForPortfolioCalculator', () => {
@@ -297,6 +613,142 @@ describe('ActivitiesService', () => {
         });
 
       return result.activities[0];
+    }
+  });
+
+  describe('getLatestActivity', () => {
+    it('filters by type and unit price and excludes draft activities', async () => {
+      const findFirst = jest.fn().mockResolvedValue(null);
+
+      const service = new ActivitiesService(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        { order: { findFirst } } as unknown as PrismaService,
+        null,
+        null
+      );
+
+      await service.getLatestActivity({
+        dataSource: DataSource.YAHOO,
+        symbol: 'AAPL',
+        types: [ActivityType.BUY, ActivityType.SELL]
+      });
+
+      expect(findFirst).toHaveBeenCalledWith({
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+        where: {
+          ...WHERE_ACTIVITY_NOT_DRAFT,
+          SymbolProfile: { dataSource: DataSource.YAHOO, symbol: 'AAPL' },
+          type: { in: [ActivityType.BUY, ActivityType.SELL] },
+          unitPrice: { gt: 0 }
+        }
+      });
+    });
+  });
+
+  describe('updateActivity', () => {
+    it('updates the custom asset profile of the user', async () => {
+      const data = await getUpdatedActivityData({ userId: 'user-id' });
+
+      expect(data.SymbolProfile).toEqual({
+        update: {
+          data: {
+            assetClass: AssetClass.COMMODITY,
+            assetSubClass: AssetSubClass.PRECIOUS_METAL
+          },
+          where: { userId: 'user-id' }
+        }
+      });
+    });
+
+    it.each([
+      { owner: 'the admin', userId: null },
+      { owner: 'another user', userId: 'other-user-id' }
+    ])('does not update the asset profile of $owner', async ({ userId }) => {
+      const data = await getUpdatedActivityData({ userId });
+
+      expect(data).not.toHaveProperty('SymbolProfile');
+    });
+
+    it('does not update the asset profile of a data provider', async () => {
+      const data = await getUpdatedActivityData({
+        dataSource: DataSource.YAHOO,
+        symbol: 'AAPL',
+        type: ActivityType.FEE,
+        userId: null
+      });
+
+      expect(data).not.toHaveProperty('SymbolProfile');
+    });
+
+    async function getUpdatedActivityData({
+      dataSource = DataSource.MANUAL,
+      symbol = 'GF_GOLD',
+      type = ActivityType.BUY,
+      userId
+    }: {
+      dataSource?: DataSource;
+      symbol?: string;
+      type?: ActivityType;
+      userId: string | null;
+    }) {
+      const update = jest.fn().mockResolvedValue({ userId: 'user-id' });
+
+      const service = new ActivitiesService(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        { emit: jest.fn() } as unknown as EventEmitter2,
+        null,
+        null,
+        {
+          order: {
+            update,
+            findUnique: jest
+              .fn()
+              .mockResolvedValue({ SymbolProfile: { userId } })
+          }
+        } as unknown as PrismaService,
+        null,
+        { validateTagIds: jest.fn() } as unknown as TagService
+      );
+
+      await service.updateActivity({
+        data: {
+          type,
+          assetClass: AssetClass.COMMODITY,
+          assetSubClass: AssetSubClass.PRECIOUS_METAL,
+          date: parseDate('2024-01-01'),
+          SymbolProfile: {
+            connect: {
+              dataSource_symbol: {
+                dataSource,
+                symbol
+              }
+            },
+            update: {
+              assetClass: AssetClass.COMMODITY,
+              assetSubClass: AssetSubClass.PRECIOUS_METAL,
+              name: symbol
+            }
+          }
+        },
+        originalDate: parseDate('2024-01-01'),
+        userId: 'user-id',
+        where: { id: 'activity-id' }
+      });
+
+      return (update.mock.calls[0] as [Prisma.OrderUpdateArgs])[0].data;
     }
   });
 });

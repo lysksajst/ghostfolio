@@ -72,9 +72,14 @@ export class ConfigurationService {
       ENABLE_FEATURE_CRON: bool({ default: true }),
       ENABLE_FEATURE_FEAR_AND_GREED_INDEX: bool({ default: false }),
       ENABLE_FEATURE_GATHER_NEW_EXCHANGE_RATES: bool({ default: true }),
+      // TODO: Change the default to true, when the server of the Model Context
+      // Protocol (MCP) was moved from experimental to general availability
       ENABLE_FEATURE_MCP: bool({ default: false }),
       ENABLE_FEATURE_RATE_LIMITING: bool({ default: false }),
       ENABLE_FEATURE_READ_ONLY_MODE: bool({ default: false }),
+      // TODO: Change the default to true, when the security headers were
+      // available for some releases without a report of a defect
+      ENABLE_FEATURE_SECURITY_HEADERS: bool({ default: false }),
       ENABLE_FEATURE_STATISTICS: bool({ default: false }),
       ENABLE_FEATURE_SUBSCRIPTION: bool({ default: false }),
       ENABLE_FEATURE_SYSTEM_MESSAGE: bool({ default: false }),
@@ -133,6 +138,7 @@ export class ConfigurationService {
       REDIS_HOST: str({ default: 'localhost' }),
       REDIS_PASSWORD: str({ default: '' }),
       REDIS_PORT: port({ default: 6379 }),
+      REDIS_TLS: bool({ default: false }),
       REQUEST_TIMEOUT: num({ default: ms('3 seconds') }),
       ROOT_URL: url({
         default: environment.rootUrl

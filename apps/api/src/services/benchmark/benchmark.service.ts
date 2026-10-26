@@ -1,8 +1,8 @@
-import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import { MarketDataService } from '@ghostfolio/api/services/market-data/market-data.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { PropertyService } from '@ghostfolio/api/services/property/property.service';
+import { RedisCacheService } from '@ghostfolio/api/services/redis-cache/redis-cache.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
 import {
   CACHE_TTL_INFINITE,
@@ -23,7 +23,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SymbolProfile } from '@prisma/client';
 import { Big } from 'big.js';
 import { addHours, isPast, subDays } from 'date-fns';
-import { round, uniqBy } from 'lodash';
+import { round, uniqBy } from 'lodash-es';
 import ms from 'ms';
 
 import { BenchmarkValue } from './interfaces/benchmark-value.interface';
@@ -216,6 +216,12 @@ export class BenchmarkService {
     }
   }
 
+  public getPerformancePercentFromAllTimeHigh(performancePercent: number) {
+    const isAtAllTimeHigh = performancePercent >= 0;
+
+    return isAtAllTimeHigh ? 0 : performancePercent;
+  }
+
   public async isBenchmark(symbolProfileId: string): Promise<boolean> {
     const benchmarks = await this.getBenchmarksProperty();
 
@@ -288,10 +294,9 @@ export class BenchmarkService {
         performances: {
           allTimeHigh: {
             date: allTimeHigh?.date,
-            performancePercent:
-              performancePercentFromAllTimeHigh >= 0
-                ? 0
-                : performancePercentFromAllTimeHigh
+            performancePercent: this.getPerformancePercentFromAllTimeHigh(
+              performancePercentFromAllTimeHigh
+            )
           }
         },
         symbol: benchmarkAssetProfiles[index].symbol,

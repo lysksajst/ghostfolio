@@ -23,6 +23,7 @@
     <div class="chart-container mb-3">
       <gf-investment-chart
         class="h-100"
+        [colorScheme]="user?.settings?.colorScheme"
         [currency]="user?.settings?.baseCurrency"
         [historicalDataItems]="historicalDataItems"
         [isInPercentage]="showValuesInPercentage()"
@@ -40,10 +41,10 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <ion-icon name="reader-outline" />
-          <div class="d-none d-sm-block ml-2" i18n>Overview</div>
+          <div class="d-none d-sm-block ms-2" i18n>Overview</div>
         </ng-template>
-        <div class="container mt-3 p-0">
-          <div class="row w-100">
+        <div class="container mt-3 overflow-hidden p-0">
+          <div class="row">
             <div class="col-6 mb-3">
               <gf-value
                 i18n
@@ -70,6 +71,37 @@
                 >Equity</gf-value
               >
             </div>
+            @if (user?.settings?.isExperimentalFeatures) {
+              <div class="col-6 mb-3">
+                <gf-value
+                  i18n
+                  size="medium"
+                  [colorizeSign]="true"
+                  [isCurrency]="true"
+                  [isLoading]="isLoadingChart"
+                  [locale]="user?.settings?.locale"
+                  [precision]="netPerformanceWithCurrencyEffectPrecision"
+                  [unit]="user?.settings?.baseCurrency"
+                  [value]="netPerformanceWithCurrencyEffect"
+                  >Change</gf-value
+                >
+              </div>
+              <div class="col-6 mb-3">
+                <gf-value
+                  i18n
+                  size="medium"
+                  [colorizeSign]="true"
+                  [isLoading]="isLoadingChart"
+                  [isPercent]="true"
+                  [locale]="user?.settings?.locale"
+                  [precision]="
+                    netPerformancePercentageWithCurrencyEffectPrecision
+                  "
+                  [value]="netPerformancePercentageWithCurrencyEffect"
+                  >Performance</gf-value
+                >
+              </div>
+            }
             <div class="col-6 mb-3">
               <gf-value
                 i18n
@@ -131,7 +163,7 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <ion-icon name="albums-outline" />
-          <div class="d-none d-sm-block ml-2" i18n>Holdings</div>
+          <div class="d-none d-sm-block ms-2" i18n>Holdings</div>
         </ng-template>
         <gf-holdings-table
           [hasPermissionToOpenDetails]="false"
@@ -142,7 +174,7 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <ion-icon name="swap-vertical-outline" />
-          <div class="d-none d-sm-block ml-2" i18n>Activities</div>
+          <div class="d-none d-sm-block ms-2" i18n>Activities</div>
         </ng-template>
         <gf-activities-table
           [baseCurrency]="user?.settings?.baseCurrency"
@@ -152,7 +184,6 @@
           [hasPermissionToCreateActivity]="data.hasPermissionToCreateActivity"
           [hasPermissionToDeleteActivity]="false"
           [hasPermissionToExportActivities]="!showValuesInPercentage()"
-          [hasPermissionToFilter]="false"
           [hasPermissionToOpenDetails]="false"
           [hasPermissionToUpdateActivity]="data.hasPermissionToUpdateActivity"
           [locale]="user?.settings?.locale"
@@ -175,7 +206,7 @@
       <mat-tab>
         <ng-template mat-tab-label>
           <ion-icon name="cash-outline" />
-          <div class="d-none d-sm-block ml-2" i18n>Cash Balances</div>
+          <div class="d-none d-sm-block ms-2" i18n>Cash Balances</div>
         </ng-template>
         <gf-account-balances
           [accountBalances]="accountBalances"
