@@ -54,8 +54,8 @@ export class EastmoneyService implements DataProviderInterface {
       return undefined;
     }
 
-    const record = (await this.getCatalog()).find(([code, , , category]) => {
-      return code === symbol && this.isSupported(category);
+    const record = (await this.getCatalog()).find(([code, , name, category]) => {
+      return code === symbol && this.isSupported(category, name);
     });
 
     return record ? this.toAssetProfile(record) : undefined;
@@ -117,13 +117,15 @@ export class EastmoneyService implements DataProviderInterface {
             .get() as string[];
           const date = cells[dateIndex];
           const description = cells[amountIndex] ?? '';
-          const number = description.match(/(\d+(?:\.\d+)?)元?/);
+          const number = description.match(/(\d+(?:\.\d+)?)/);
 
           if (!this.isValidDate(date) || date < first || date > last || !number) {
             return;
           }
 
-          const denominator = /每10份/.test(description) ? 10 : 1;
+          const denominator = /每10份/.test(headers[amountIndex] + description)
+            ? 10
+            : 1;
           const marketPrice = Number(number[1]) / denominator;
 
           if (Number.isFinite(marketPrice) && marketPrice > 0) {
@@ -246,7 +248,7 @@ export class EastmoneyService implements DataProviderInterface {
       const records = (await this.getCatalog())
         .filter(([code, abbreviation, name, category, pinyin]) => {
           return (
-            this.isSupported(category) &&
+            this.isSupported(category, name) &&
             (code.includes(term) ||
               name.toLowerCase().includes(term) ||
               abbreviation.toLowerCase().includes(term) ||
@@ -376,7 +378,8 @@ export class EastmoneyService implements DataProviderInterface {
       if (
         latestOnly ||
         batch.length < pageSize ||
-        page * pageSize >= Number(body.TotalCount)
+        (Number.isFinite(Number(body.TotalCount)) &&
+          page * pageSize >= Number(body.TotalCount))
       ) {
         break;
       }
@@ -397,10 +400,12 @@ export class EastmoneyService implements DataProviderInterface {
     return response.text();
   }
 
-  private isSupported(category: string): boolean {
-    // On-exchange ETFs/LOFs use Yahoo, and money-market fund NAVs
-    // require a different accounting model.
-    return !/货币|理财|ETF|LOF/i.test(category);
+  private isSupported(category: string, name: string): boolean {
+    // ETF feeder funds remain mutual funds; on-exchange LOF and ETF
+    // quotes belong to Yahoo. Money-market fund accounting is excluded.
+    return !/货币|理财/i.test(category) &&
+      !/LOF/i.test(name) &&
+      !/^ETF$/i.test(category);
   }
 
   private isValidDate(date: string): boolean {
