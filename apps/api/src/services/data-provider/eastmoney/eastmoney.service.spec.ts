@@ -1,0 +1,112 @@
+import { EastmoneyService } from './eastmoney.service';
+
+describe('EastmoneyService', () => {
+  const catalog = [
+    ['015564', 'DCHY', '大成弘远回报一年持有混合A', '混合型-偏股', 'DACHENG'],
+    ['090007', 'DCCL', '大成策略回报混合A', '混合型-偏股', 'DACHENG'],
+    ['019455', 'ZHB', '华泰柏瑞中韩半导体ETF联接(QDII)C', '指数型-海外股票', 'HUATAI'],
+    ['000198', 'HBJJ', '某货币基金', '货币型', 'HUOBI'],
+    ['161999', 'LOF', '某LOF基金', '混合型', 'LOF']
+  ];
+
+  let service: EastmoneyService;
+  let fetchService: { fetch: jest.Mock };
+
+  beforeEach(() => {
+    fetchService = {
+      fetch: jest.fn().mockImplementation(async (url: string) => {
+        if (url.includes('fundcode_search.js')) {
+          return {
+            ok: true,
+            text: async () => 'var r = ' + JSON.stringify(catalog) + ';'
+          };
+        }
+        if (url.includes('/f10/lsjz')) {
+          return {
+            ok: true,
+            json: async () => ({
+              ErrCode: 0,
+              TotalCount: 2,
+              Data: {
+                LSJZList: [
+                  { FSRQ: '2026-10-30', DWJZ: '1.2345' },
+                  { FSRQ: '2026-10-29', DWJZ: '1.2300' }
+                ]
+              }
+            })
+          };
+        }
+        if (url.includes('/fhsp_')) {
+          return {
+            ok: true,
+            text: async () => [
+              '<table><tr><th>年份</th><th>权益登记日</th><th>除息日</th>',
+              '<th>每份分红</th><th>分红发放日</th></tr>',
+              '<tr><td>2026</td><td>2026-10-29</td><td>2026-10-30</td>',
+              '<td>0.0500元</td><td>2026-11-02</td></tr></table>'
+            ].join('')
+          };
+        }
+        throw new Error('Unexpected URL ' + url);
+      })
+    };
+    service = new EastmoneyService(
+      { get: jest.fn().mockReturnValue(15000) } as any,
+      fetchService as any
+    );
+  });
+
+  it('searches six-digit codes without requiring MANUAL assets', async () => {
+    const result = await service.search({ query: '015564' });
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        symbol: '015564',
+        currency: 'CNY',
+        name: '大成弘远回报一年持有混合A'
+      })
+    ]);
+  });
+
+  it('supports QDII ETF feeder funds but excludes money market and LOF', async () => {
+    const result = await service.search({ query: '基金' });
+    expect(result.items.some(({ symbol }) => symbol === '000198')).toBe(false);
+    expect(result.items.some(({ symbol }) => symbol === '161999')).toBe(false);
+    expect((await service.search({ query: '019455' })).items).toHaveLength(1);
+  });
+
+  it('uses the source NAV dates rather than the fetch date', async () => {
+    const result = await service.getHistorical({
+      from: new Date('2026-10-29T00:00:00Z'),
+      to: new Date('2026-11-03T00:00:00Z'),
+      symbol: '015564'
+    });
+
+    expect(result).toEqual({
+      '2026-10-29': { marketPrice: 1.23 },
+      '2026-10-30': { marketPrice: 1.2345 }
+    });
+    expect(result['2026-11-03']).toBeUndefined();
+  });
+
+  it('returns delayed quotes so the core does not insert today's INTRADAY price', async () => {
+    const result = await service.getQuotes({ symbols: ['015564'] });
+
+    expect(result['015564']).toEqual(
+      expect.objectContaining({
+        marketPrice: 1.2345,
+        marketState: 'delayed'
+      })
+    );
+  });
+
+  it('exposes per-share dividends via the existing Ghostfolio import path', async () => {
+    const result = await service.getDividends({
+      symbol: '015564',
+      from: new Date('2026-10-01T00:00:00Z'),
+      to: new Date('2026-11-03T00:00:00Z')
+    });
+
+    expect(result).toEqual({ '2026-10-30': { marketPrice: 0.05 } });
+  });
+});
