@@ -267,13 +267,13 @@ export class EastmoneyService implements DataProviderInterface {
           const profile = this.toAssetProfile(record);
 
           return {
-            assetClass: profile.assetClass,
-            assetSubClass: profile.assetSubClass,
+            assetClass: profile.assetClass ?? AssetClass.EQUITY,
+            assetSubClass: AssetSubClass.MUTUALFUND,
             currency: 'CNY',
             dataProviderInfo: this.getDataProviderInfo(),
             dataSource: this.getName(),
-            name: profile.name,
-            symbol: profile.symbol
+            name: record[2],
+            symbol: record[0]
           };
         })
       };
@@ -408,7 +408,7 @@ export class EastmoneyService implements DataProviderInterface {
       !/^ETF$/i.test(category);
   }
 
-  private isValidDate(date: string): boolean {
+  private isValidDate(date?: string): boolean {
     return typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date);
   }
 
