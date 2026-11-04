@@ -150,6 +150,32 @@ describe('EastmoneyService', () => {
     ).rejects.toThrow('Incomplete Eastmoney NAV history');
   });
 
+  it('rejects repeated pages if upstream ignores pageIndex', async () => {
+    const samePage = Array.from({ length: 20 }, (_, index) => ({
+      FSRQ: new Date(Date.UTC(2026, 9, 30 - index))
+        .toISOString()
+        .slice(0, 10),
+      DWJZ: '1.1'
+    }));
+
+    fetchService.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ErrCode: 0,
+        TotalCount: 40,
+        Data: { LSJZList: samePage }
+      })
+    });
+
+    await expect(
+      service.getHistorical({
+        from: new Date('2026-01-01T00:00:00Z'),
+        to: new Date('2026-11-03T00:00:00Z'),
+        symbol: '090007'
+      })
+    ).rejects.toThrow('pagination repeated a page');
+  });
+
   it('returns delayed quotes so the core does not insert today's INTRADAY price', async () => {
     const result = await service.getQuotes({ symbols: ['015564'] });
 
