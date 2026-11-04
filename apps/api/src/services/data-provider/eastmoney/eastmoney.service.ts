@@ -65,7 +65,7 @@ export class EastmoneyService implements DataProviderInterface {
     return {
       dataSource: this.getName(),
       isPremium: false,
-      name: 'Eastmoney (fund NAV)',
+      name: 'Eastmoney Fund',
       url: 'https://fund.eastmoney.com'
     };
   }
