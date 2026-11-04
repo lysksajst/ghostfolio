@@ -468,10 +468,16 @@ export class EastmoneyService implements DataProviderInterface {
   private isSupported(category: string, name: string): boolean {
     // ETF feeder funds remain mutual funds; on-exchange LOF and ETF
     // quotes belong to Yahoo. Money-market fund accounting is excluded.
+    // Feeder naming varies (ETF发起联接 / ETF发起式联接), and a trailing
+    // share-class letter is a fallback signal even when 联接 is omitted.
+    const isEtf = /ETF/i.test(name);
+    const isEtfFeeder =
+      /ETF.*联接/i.test(name) || /ETF.*[^A-Z][A-Z]$/i.test(name);
+
     return (
       !/货币|理财/i.test(category) &&
       !/LOF/i.test(name) &&
-      !/ETF(?!联接|发起式联接)/i.test(name)
+      (!isEtf || isEtfFeeder)
     );
   }
 
