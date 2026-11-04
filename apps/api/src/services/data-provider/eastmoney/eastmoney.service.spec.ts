@@ -187,6 +187,36 @@ describe('EastmoneyService', () => {
     );
   });
 
+  it('parses real Eastmoney per-10-share dividends without treating 10 as the payout', async () => {
+    fetchService.fetch.mockResolvedValue({
+      ok: true,
+      text: async () => [
+        '<html><body>',
+        '<table><tr><th>年份</th><th>权益登记日</th><th>除息日</th>',
+        '<th>每10份分红</th><th>分红发放日</th></tr>',
+        '<tr><td>2026年</td><td>2026-01-16</td><td>2026-01-16</td>',
+        '<td>每10份派现金1.4800元</td><td>2026-01-19</td></tr>',
+        '<tr><td>2025年</td><td>2025-01-20</td><td>2025-01-20</td>',
+        '<td>每10份派现金1.7568元</td><td>2025-01-21</td></tr>',
+        '</table>',
+        '<table><tr><th>拆分折算日</th><th>拆分类型</th></tr>',
+        '<tr><td>2020-01-01</td><td>份额折算</td></tr></table>',
+        '</body></html>'
+      ].join('')
+    });
+
+    const result = await service.getDividends({
+      symbol: '090007',
+      from: new Date('2025-01-01T00:00:00Z'),
+      to: new Date('2026-11-03T00:00:00Z')
+    });
+
+    expect(result).toEqual({
+      '2025-01-20': { marketPrice: 0.17568 },
+      '2026-01-16': { marketPrice: 0.148 }
+    });
+  });
+
   it('exposes per-share dividends via the existing Ghostfolio import path', async () => {
     const result = await service.getDividends({
       symbol: '015564',
