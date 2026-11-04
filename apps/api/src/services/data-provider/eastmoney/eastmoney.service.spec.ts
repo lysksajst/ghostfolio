@@ -11,7 +11,8 @@ describe('EastmoneyService', () => {
     ['888883', 'TEST', '示例沪深300ETF', '指数型-股票', 'TEST'],
     ['888884', 'TEST', '示例纳斯达克ETF(QDII)', '指数型-海外股票', 'TEST'],
     ['000198', 'HBJJ', '某货币基金', '货币型', 'HUOBI'],
-    ['161999', 'LOF', '某LOF基金', '混合型', 'LOF']
+    ['161999', 'LOF', '某LOF基金', '混合型', 'LOF'],
+    ['161725', 'ZSBL', '招商中证白酒指数(LOF)A', '指数型-股票', 'ZHAOSHANG']
   ];
 
   let service: EastmoneyService;
@@ -73,11 +74,25 @@ describe('EastmoneyService', () => {
     ]);
   });
 
-  it('supports QDII ETF feeder funds but excludes money market and LOF', async () => {
+  it('supports QDII ETF feeder funds but excludes money market', async () => {
     const result = await service.search({ query: '基金' });
     expect(result.items.some(({ symbol }) => symbol === '000198')).toBe(false);
-    expect(result.items.some(({ symbol }) => symbol === '161999')).toBe(false);
     expect((await service.search({ query: '019455' })).items).toHaveLength(1);
+  });
+
+  it('allows LOF funds to use their off-exchange NAV under EASTMONEY', async () => {
+    for (const symbol of ['161999', '161725']) {
+      expect((await service.search({ query: symbol })).items).toEqual([
+        expect.objectContaining({
+          symbol,
+          currency: 'CNY',
+          dataSource: service.getName()
+        })
+      ]);
+      expect(await service.getAssetProfile({ symbol })).toEqual(
+        expect.objectContaining({ symbol })
+      );
+    }
   });
 
   it('recognizes ETF feeder variants and terminal share-class letters', async () => {
