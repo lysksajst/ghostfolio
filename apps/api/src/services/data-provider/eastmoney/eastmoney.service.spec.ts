@@ -5,6 +5,11 @@ describe('EastmoneyService', () => {
     ['015564', 'DCHY', '大成弘远回报一年持有混合A', '混合型-偏股', 'DACHENG'],
     ['090007', 'DCCL', '大成策略回报混合A', '混合型-偏股', 'DACHENG'],
     ['019455', 'ZHB', '华泰柏瑞中韩半导体ETF联接(QDII)C', '指数型-海外股票', 'HUATAI'],
+    ['011840', 'THRG', '天弘中证人工智能主题ETF发起联接C', '指数型-股票', 'TIANHONG'],
+    ['888881', 'TEST', '示例ETF发起式联接A', '指数型-股票', 'TEST'],
+    ['888882', 'TEST', '示例ETF指数增强C', '指数型-股票', 'TEST'],
+    ['888883', 'TEST', '示例沪深300ETF', '指数型-股票', 'TEST'],
+    ['888884', 'TEST', '示例纳斯达克ETF(QDII)', '指数型-海外股票', 'TEST'],
     ['000198', 'HBJJ', '某货币基金', '货币型', 'HUOBI'],
     ['161999', 'LOF', '某LOF基金', '混合型', 'LOF']
   ];
@@ -73,6 +78,22 @@ describe('EastmoneyService', () => {
     expect(result.items.some(({ symbol }) => symbol === '000198')).toBe(false);
     expect(result.items.some(({ symbol }) => symbol === '161999')).toBe(false);
     expect((await service.search({ query: '019455' })).items).toHaveLength(1);
+  });
+
+  it('recognizes ETF feeder variants and terminal share-class letters', async () => {
+    for (const symbol of ['011840', '888881', '888882']) {
+      expect((await service.search({ query: symbol })).items).toEqual([
+        expect.objectContaining({ symbol, currency: 'CNY' })
+      ]);
+      expect(await service.getAssetProfile({ symbol })).toEqual(
+        expect.objectContaining({ symbol })
+      );
+    }
+
+    for (const symbol of ['888883', '888884']) {
+      expect((await service.search({ query: symbol })).items).toHaveLength(0);
+      expect(await service.getAssetProfile({ symbol })).toBeUndefined();
+    }
   });
 
   it('uses the source NAV dates rather than the fetch date', async () => {
