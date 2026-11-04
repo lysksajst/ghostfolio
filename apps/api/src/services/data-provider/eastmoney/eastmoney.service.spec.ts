@@ -89,6 +89,67 @@ describe('EastmoneyService', () => {
     expect(result['2026-11-03']).toBeUndefined();
   });
 
+  it('loads beyond the first 20 NAV records using multiple pages', async () => {
+    const allRows = Array.from({ length: 45 }, (_, index) => ({
+      FSRQ: new Date(Date.UTC(2026, 9, 30 - index))
+        .toISOString()
+        .slice(0, 10),
+      DWJZ: String(1 + index / 1000)
+    }));
+
+    fetchService.fetch.mockImplementation(async (url: string) => {
+      const query = new URL(url).searchParams;
+      const pageSize = Number(query.get('pageSize'));
+      const pageIndex = Number(query.get('pageIndex'));
+
+      expect(pageSize).toBe(20);
+
+      return {
+        ok: true,
+        json: async () => ({
+          ErrCode: 0,
+          TotalCount: allRows.length,
+          Data: {
+            LSJZList: allRows.slice(
+              (pageIndex - 1) * pageSize,
+              pageIndex * pageSize
+            )
+          }
+        })
+      };
+    });
+
+    const result = await service.getHistorical({
+      from: new Date('2026-09-01T00:00:00Z'),
+      to: new Date('2026-11-03T00:00:00Z'),
+      symbol: '090007'
+    });
+
+    expect(fetchService.fetch).toHaveBeenCalledTimes(3);
+    expect(Object.keys(result)).toHaveLength(45);
+    expect(result['2026-10-30']).toEqual({ marketPrice: 1 });
+    expect(result['2026-09-16']).toEqual({ marketPrice: 1.044 });
+  });
+
+  it('refuses to silently truncate NAV history if page counts disagree', async () => {
+    fetchService.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ErrCode: 0,
+        TotalCount: 45,
+        Data: { LSJZList: [{ FSRQ: '2026-10-30', DWJZ: '1.1' }] }
+      })
+    });
+
+    await expect(
+      service.getHistorical({
+        from: new Date('2026-01-01T00:00:00Z'),
+        to: new Date('2026-11-03T00:00:00Z'),
+        symbol: '090007'
+      })
+    ).rejects.toThrow('Incomplete Eastmoney NAV history');
+  });
+
   it('returns delayed quotes so the core does not insert today's INTRADAY price', async () => {
     const result = await service.getQuotes({ symbols: ['015564'] });
 
