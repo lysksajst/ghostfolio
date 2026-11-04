@@ -353,7 +353,7 @@ export class EastmoneyService implements DataProviderInterface {
         startDate: first,
         endDate: last
       });
-      const response = await this.fetchService.fetch(
+      const response = await this.fetchWithDiagnostics(
         this.navUrl + '?' + params.toString(),
         {
           headers: {
@@ -419,8 +419,40 @@ export class EastmoneyService implements DataProviderInterface {
     return rows;
   }
 
+  private async fetchWithDiagnostics(
+    url: string,
+    init: RequestInit
+  ): Promise<Response> {
+    try {
+      return await this.fetchService.fetch(url, init);
+    } catch (error) {
+      const cause =
+        error instanceof Error
+          ? (error as Error & { cause?: unknown }).cause
+          : undefined;
+      const code =
+        cause && typeof cause === 'object' && 'code' in cause
+          ? String(cause.code)
+          : 'unknown';
+      const reason = cause instanceof Error ? cause.message : String(cause);
+
+      this.logger.error(
+        'Eastmoney network request failed (' +
+          new URL(url).hostname +
+          '): ' +
+          String(error) +
+          '; cause=' +
+          code +
+          ': ' +
+          reason
+      );
+
+      throw error;
+    }
+  }
+
   private async fetchText(url: string, timeout: number): Promise<string> {
-    const response = await this.fetchService.fetch(url, {
+    const response = await this.fetchWithDiagnostics(url, {
       signal: AbortSignal.timeout(timeout)
     });
 
