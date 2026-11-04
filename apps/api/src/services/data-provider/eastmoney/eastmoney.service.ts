@@ -103,7 +103,7 @@ export class EastmoneyService implements DataProviderInterface {
           .get() as string[];
         const dateIndex = headers.findIndex((value) => value.includes('除息日'));
         const amountIndex = headers.findIndex((value) =>
-          value.includes('每份分红')
+          /每(?:10)?份分红/.test(value)
         );
 
         if (dateIndex < 0 || amountIndex < 0) {
@@ -117,7 +117,9 @@ export class EastmoneyService implements DataProviderInterface {
             .get() as string[];
           const date = cells[dateIndex];
           const description = cells[amountIndex] ?? '';
-          const number = description.match(/(\d+(?:\.\d+)?)/);
+          // Amount descriptions may begin with "每10份", so extract only
+          // the currency amount rather than the first number in the text.
+          const number = description.match(/(\d+(?:\.\d+)?)\s*元/);
 
           if (!this.isValidDate(date) || date < first || date > last || !number) {
             return;
