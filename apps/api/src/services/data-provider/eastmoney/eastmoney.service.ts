@@ -343,6 +343,7 @@ export class EastmoneyService implements DataProviderInterface {
     const pageSize = latestOnly ? 1 : 20;
     const maximumPages = 500;
     const rows: NavRow[] = [];
+    const pageHeads = new Set<string>();
 
     for (let page = 1; page <= maximumPages; page++) {
       const params = new URLSearchParams({
@@ -375,6 +376,16 @@ export class EastmoneyService implements DataProviderInterface {
 
       if (body.ErrCode || !Array.isArray(batch)) {
         throw new Error('Invalid Eastmoney NAV response for ' + symbol);
+      }
+
+      if (batch.length > 0 && pageHeads.has(batch[0].FSRQ)) {
+        throw new Error(
+          'Eastmoney NAV pagination repeated a page for ' + symbol
+        );
+      }
+
+      if (batch.length > 0) {
+        pageHeads.add(batch[0].FSRQ);
       }
 
       rows.push(...batch);
