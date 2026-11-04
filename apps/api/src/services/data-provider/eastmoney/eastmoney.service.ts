@@ -337,10 +337,14 @@ export class EastmoneyService implements DataProviderInterface {
     latestOnly?: boolean;
     requestTimeout: number;
   }): Promise<NavRow[]> {
-    const pageSize = latestOnly ? 1 : 100;
+    // The F10 endpoint's documented consumers paginate in batches of 20.
+    // Asking for 100 and stopping after a short response silently truncates
+    // history to roughly one month if the server caps the page size at 20.
+    const pageSize = latestOnly ? 1 : 20;
+    const maximumPages = 500;
     const rows: NavRow[] = [];
 
-    for (let page = 1; page <= 100; page++) {
+    for (let page = 1; page <= maximumPages; page++) {
       const params = new URLSearchParams({
         fundCode: symbol,
         pageIndex: String(page),
@@ -375,13 +379,29 @@ export class EastmoneyService implements DataProviderInterface {
 
       rows.push(...batch);
 
-      if (
-        latestOnly ||
-        batch.length < pageSize ||
-        (Number.isFinite(Number(body.TotalCount)) &&
-          page * pageSize >= Number(body.TotalCount))
-      ) {
+      const totalCount = Number(body.TotalCount);
+      const hasTotalCount =
+        body.TotalCount !== undefined && Number.isFinite(totalCount);
+
+      if (latestOnly || (hasTotalCount && rows.length >= totalCount)) {
         break;
+      }
+
+      if (batch.length < pageSize) {
+        if (hasTotalCount && rows.length < totalCount) {
+          throw new Error(
+            'Incomplete Eastmoney NAV history for ' + symbol +
+              ': fetched ' + rows.length + ' of ' + totalCount
+          );
+        }
+
+        break;
+      }
+
+      if (page === maximumPages) {
+        throw new Error(
+          'Eastmoney NAV history exceeds pagination safety limit for ' + symbol
+        );
       }
     }
 
